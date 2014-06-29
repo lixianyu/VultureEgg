@@ -22,7 +22,7 @@
   its documentation for any purpose.
 
   YOU FURTHER ACKNOWLEDGE AND AGREE THAT THE SOFTWARE AND DOCUMENTATION ARE
-  PROVIDED “AS IS” WITHOUT WARRANTY OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+  PROVIDED “AS IS?WITHOUT WARRANTY OF ANY KIND, EITHER EXPRESS OR IMPLIED,
   INCLUDING WITHOUT LIMITATION, ANY WARRANTY OF MERCHANTABILITY, TITLE,
   NON-INFRINGEMENT AND FITNESS FOR A PARTICULAR PURPOSE. IN NO EVENT SHALL
   TEXAS INSTRUMENTS OR ITS LICENSORS BE LIABLE OR OBLIGATED UNDER CONTRACT,
@@ -93,6 +93,7 @@
 #include "hal_mag.h"
 #include "hal_bar.h"
 #include "hal_gyro.h"
+#include "MPU6050.h"
 
 /*********************************************************************
  * MACROS
@@ -109,6 +110,7 @@
 #define MAG_DEFAULT_PERIOD                    2000
 #define ACC_DEFAULT_PERIOD                    1000
 #define GYRO_DEFAULT_PERIOD                   1000
+#define MPU6050_DEFAULT_PERIOD                200
 
 // Constants for two-stage reading
 #define TEMP_MEAS_DELAY                       275   // Conversion time 250 ms
@@ -118,10 +120,10 @@
 #define GYRO_STARTUP_TIME                     60    // Start-up time max. 50 ms
 
 // What is the advertising interval when device is discoverable (units of 625us, 160=100ms)
-#define DEFAULT_ADVERTISING_INTERVAL          160
+#define DEFAULT_ADVERTISING_INTERVAL          169
 
 // General discoverable mode advertises indefinitely
-#define DEFAULT_DISCOVERABLE_MODE             GAP_ADTYPE_FLAGS_LIMITED
+#define DEFAULT_DISCOVERABLE_MODE             GAP_ADTYPE_FLAGS_GENERAL
 
 // Minimum connection interval (units of 1.25ms, 80=100ms) if automatic parameter update request is enabled
 #define DEFAULT_DESIRED_MIN_CONN_INTERVAL     80
@@ -133,10 +135,10 @@
 #define DEFAULT_DESIRED_SLAVE_LATENCY         0
 
 // Supervision timeout value (units of 10ms, 1000=10s) if automatic parameter update request is enabled
-#define DEFAULT_DESIRED_CONN_TIMEOUT          1000
+#define DEFAULT_DESIRED_CONN_TIMEOUT          600
 
 // Whether to enable automatic parameter update request when a connection is formed
-#define DEFAULT_ENABLE_UPDATE_REQUEST         FALSE
+#define DEFAULT_ENABLE_UPDATE_REQUEST         TRUE
 
 // Connection Pause Peripheral time value (in seconds)
 #define DEFAULT_CONN_PAUSE_PERIPHERAL         8
@@ -195,16 +197,17 @@ static gaprole_States_t gapProfileState = GAPROLE_INIT;
 static uint8 scanRspData[] =
 {
   // complete name
-  0x0A,   // length of this data
+  0x0B,   // length of this data
   GAP_ADTYPE_LOCAL_NAME_COMPLETE,
-  0x53,   // 'S'
-  0x65,   // 'e'
-  0x6E,   // 'n'
-  0x73,   // 's'
-  0x6F,   // 'o'
+  0x56,   // 'V'
+  0x75,   // 'u'
+  0x6C,   // 'l'
+  0x74,   // 't'
+  0x75,   // 'u'
   0x72,   // 'r'
-  0x54,   // 'T'
-  0x61,   // 'a'
+  0x65,   // 'e'
+  0x45,   // 'E'
+  0x67,   // 'g'
   0x67,   // 'g'
 
   // connection interval range
@@ -231,10 +234,16 @@ static uint8 advertData[] =
   0x02,   // length of this data
   GAP_ADTYPE_FLAGS,
   DEFAULT_DISCOVERABLE_MODE | GAP_ADTYPE_FLAGS_BREDR_NOT_SUPPORTED,
+  0x0f,
+  GAP_ADTYPE_16BIT_MORE,
+  0x44,0x44, // This the magic number.
+  0x01,0x02,0x03,0x04,// Here is Temperature.
+  0x05,0x06,0x07,0x08,// Here is Humidity.
+  0x09,0x0a,0x0b,0x0c,// Here is Barometer.
 };
 
 // GAP GATT Attributes
-static uint8 attDeviceName[] = "TI BLE Sensor Tag";
+static uint8 attDeviceName[] = "Egg";
 
 // Sensor State Variables
 static bool   irTempEnabled = FALSE;
@@ -255,6 +264,7 @@ static uint16 sensorTmpPeriod = TEMP_DEFAULT_PERIOD;
 static uint16 sensorHumPeriod = HUM_DEFAULT_PERIOD;
 static uint16 sensorBarPeriod = BAR_DEFAULT_PERIOD;
 static uint16 sensorGyrPeriod = GYRO_DEFAULT_PERIOD;
+static uint16 sensorMpu6050Period = MPU6050_DEFAULT_PERIOD;
 
 static uint8  sensorGyroAxes = 0;
 static bool   sensorGyroUpdateAxes = FALSE;
@@ -274,6 +284,7 @@ static void readMagData( void );
 static void readBarData( void );
 static void readBarCalibration( void );
 static void readGyroData( void );
+static void readMPU6050DataAdv( void );
 
 static void barometerChangeCB( uint8 paramID );
 static void irTempChangeCB( uint8 paramID );
@@ -382,12 +393,12 @@ void SensorTag_Init( uint8 task_id )
   // Setup the GAP Peripheral Role Profile
   {
     // Device starts advertising upon initialization
-    uint8 initial_advertising_enable = FALSE;
+    uint8 initial_advertising_enable = TRUE;
 
     // By setting this to zero, the device will go into the waiting state after
     // being discoverable for 30.72 second, and will not being advertising again
     // until the enabler is set back to TRUE
-    uint16 gapRole_AdvertOffTime = 0;
+    uint16 gapRole_AdvertOffTime = 1;
     uint8 enable_update_request = DEFAULT_ENABLE_UPDATE_REQUEST;
     uint16 desired_min_interval = DEFAULT_DESIRED_MIN_CONN_INTERVAL;
     uint16 desired_max_interval = DEFAULT_DESIRED_MAX_CONN_INTERVAL;
@@ -441,14 +452,14 @@ void SensorTag_Init( uint8 task_id )
   GGS_AddService( GATT_ALL_SERVICES );            // GAP
   GATTServApp_AddService( GATT_ALL_SERVICES );    // GATT attributes
   DevInfo_AddService();                           // Device Information Service
-  IRTemp_AddService (GATT_ALL_SERVICES );         // IR Temperature Service
-  Accel_AddService (GATT_ALL_SERVICES );          // Accelerometer Service
-  Humidity_AddService (GATT_ALL_SERVICES );       // Humidity Service
-  Magnetometer_AddService( GATT_ALL_SERVICES );   // Magnetometer Service
-  Barometer_AddService( GATT_ALL_SERVICES );      // Barometer Service
-  Gyro_AddService( GATT_ALL_SERVICES );           // Gyro Service
+  //IRTemp_AddService (GATT_ALL_SERVICES );         // IR Temperature Service
+  //Accel_AddService (GATT_ALL_SERVICES );          // Accelerometer Service
+  //Humidity_AddService (GATT_ALL_SERVICES );       // Humidity Service
+  //Magnetometer_AddService( GATT_ALL_SERVICES );   // Magnetometer Service
+  //Barometer_AddService( GATT_ALL_SERVICES );      // Barometer Service
+  //Gyro_AddService( GATT_ALL_SERVICES );           // Gyro Service
   SK_AddService( GATT_ALL_SERVICES );             // Simple Keys Profile
-  Test_AddService( GATT_ALL_SERVICES );           // Test Profile
+  //Test_AddService( GATT_ALL_SERVICES );           // Test Profile
   CcService_AddService( GATT_ALL_SERVICES );      // Connection Control Service
 
 #if defined FEATURE_OAD
@@ -456,30 +467,31 @@ void SensorTag_Init( uint8 task_id )
 #endif
 
   // Setup the Seensor Profile Characteristic Values
-  resetCharacteristicValues();
+  //resetCharacteristicValues();
 
   // Register for all key events - This app will handle all key events
-  RegisterForKeys( sensorTag_TaskID );
+  //RegisterForKeys( sensorTag_TaskID );
 
   // makes sure LEDs are off
   HalLedSet( (HAL_LED_1 | HAL_LED_2), HAL_LED_MODE_OFF );
 
   // Initialise sensor drivers
-  HALIRTempInit();
-  HalHumiInit();
-  HalMagInit();
-  HalAccInit();
-  HalBarInit();
-  HalGyroInit();
-
+  //HALIRTempInit();
+  //HalHumiInit();
+  //HalMagInit();
+  //HalAccInit();
+  //HalBarInit();
+  //HalGyroInit();
+    HalMPU6050initialize();
+  
   // Register callbacks with profile
-  VOID IRTemp_RegisterAppCBs( &sensorTag_IrTempCBs );
-  VOID Magnetometer_RegisterAppCBs( &sensorTag_MagnetometerCBs );
-  VOID Accel_RegisterAppCBs( &sensorTag_AccelCBs );
-  VOID Humidity_RegisterAppCBs( &sensorTag_HumidCBs );
-  VOID Barometer_RegisterAppCBs( &sensorTag_BarometerCBs );
-  VOID Gyro_RegisterAppCBs( &sensorTag_GyroCBs );
-  VOID Test_RegisterAppCBs( &sensorTag_TestCBs );
+  //VOID IRTemp_RegisterAppCBs( &sensorTag_IrTempCBs );
+  //VOID Magnetometer_RegisterAppCBs( &sensorTag_MagnetometerCBs );
+  //VOID Accel_RegisterAppCBs( &sensorTag_AccelCBs );
+  //VOID Humidity_RegisterAppCBs( &sensorTag_HumidCBs );
+  //VOID Barometer_RegisterAppCBs( &sensorTag_BarometerCBs );
+  //VOID Gyro_RegisterAppCBs( &sensorTag_GyroCBs );
+  //VOID Test_RegisterAppCBs( &sensorTag_TestCBs );
   VOID CcService_RegisterAppCBs( &sensorTag_ccCBs );
   VOID GAPRole_RegisterAppCBs( &paramUpdateCB );
 
@@ -543,6 +555,7 @@ uint16 SensorTag_ProcessEvent( uint8 task_id, uint16 events )
     // Start Bond Manager
     VOID GAPBondMgr_Register( &sensorTag_BondMgrCBs );
 
+    osal_start_timerEx( sensorTag_TaskID, ST_MPU6050_SENSOR_EVT, sensorMpu6050Period );
     return ( events ^ ST_START_DEVICE_EVT );
   }
 
@@ -592,6 +605,16 @@ uint16 SensorTag_ProcessEvent( uint8 task_id, uint16 events )
     }
 
     return (events ^ ST_ACCELEROMETER_SENSOR_EVT);
+  }
+
+  //////////////////////////
+  //    MPU6050           //
+  //////////////////////////
+  if ( events & ST_MPU6050_SENSOR_EVT )
+  {
+    readMPU6050DataAdv();
+    osal_start_timerEx( sensorTag_TaskID, ST_MPU6050_SENSOR_EVT, sensorMpu6050Period );
+    return (events ^ ST_MPU6050_SENSOR_EVT);
   }
 
   //////////////////////////
@@ -1112,6 +1135,51 @@ static void readIrTempData( void )
   }
 }
 
+static void readIrTempDataAdv( void )
+{
+  uint8 tData[IRTEMPERATURE_DATA_LEN];
+
+  if (HalIRTempRead(tData))
+  {
+    //IRTemp_SetParameter( SENSOR_DATA, IRTEMPERATURE_DATA_LEN, tData);
+
+    advertData[7] = tData[0];
+    advertData[8] = tData[1];
+    advertData[9] = tData[2];
+    advertData[10] = tData[3];
+    GAPRole_SetParameter( GAPROLE_ADVERT_DATA, sizeof( advertData ), advertData );
+  }
+}
+
+static void readMPU6050DataAdv( void )
+{
+  int16 ax,ay,az,gx,gy,gz;
+  uint8 *p = (uint8*)&ax;
+
+  HalMPU6050getMotion6(&ax, &ay, &az, &gx, &gy, &gz);
+
+    //IRTemp_SetParameter( SENSOR_DATA, IRTEMPERATURE_DATA_LEN, tData);
+    //p = (uint8*)(&ax);
+    advertData[7] = *(p+1);
+    advertData[8] = *p;
+    p = (uint8*)&ay;
+    advertData[9] = *(p+1);
+    advertData[10] = *p;
+    p = (uint8*)&az;
+    advertData[11] = *(p+1);
+    advertData[12] = *p;
+    p = (uint8*)&gx;
+    advertData[13] = *(p+1);
+    advertData[14] = *p;
+    p = (uint8*)&gy;
+    advertData[15] = *(p+1);
+    advertData[16] = *p;
+    p = (uint8*)&gz;
+    advertData[17] = *(p+1);
+    advertData[18] = *p;
+    GAPRole_SetParameter( GAPROLE_ADVERT_DATA, sizeof( advertData ), advertData );
+}
+
 /*********************************************************************
  * @fn      readGyroData
  *
@@ -1199,11 +1267,11 @@ static void barometerChangeCB( uint8 paramID )
 static void irTempChangeCB( uint8 paramID )
 {
   uint8 newValue;
-  
+
   switch (paramID) {
   case SENSOR_CONF:
     IRTemp_GetParameter( SENSOR_CONF, &newValue );
-    
+
     if ( newValue == ST_CFG_SENSOR_DISABLE)
     {
       // Put sensor to sleep
@@ -1222,12 +1290,12 @@ static void irTempChangeCB( uint8 paramID )
       }
     }
     break;
-    
+
   case SENSOR_PERI:
     IRTemp_GetParameter( SENSOR_PERI, &newValue );
     sensorTmpPeriod = newValue*SENSOR_PERIOD_RESOLUTION;
     break;
-    
+
   default:
     // Should not get here
     break;
@@ -1343,12 +1411,12 @@ static void magnetometerChangeCB( uint8 paramID )
 static void humidityChangeCB( uint8 paramID )
 {
   uint8 newValue;
-  
+
   switch ( paramID)
   {
   case  SENSOR_CONF:
     Humidity_GetParameter( SENSOR_CONF, &newValue );
-    
+
     if ( newValue == ST_CFG_SENSOR_DISABLE)
     {
       if (humiEnabled)
@@ -1357,7 +1425,7 @@ static void humidityChangeCB( uint8 paramID )
         osal_set_event( sensorTag_TaskID, ST_HUMIDITY_SENSOR_EVT);
       }
     }
-    
+
     if ( newValue == ST_CFG_SENSOR_ENABLE )
     {
       if (!humiEnabled)
@@ -1368,12 +1436,12 @@ static void humidityChangeCB( uint8 paramID )
       }
     }
     break;
-    
+
   case SENSOR_PERI:
     Humidity_GetParameter( SENSOR_PERI, &newValue );
     sensorHumPeriod = newValue*SENSOR_PERIOD_RESOLUTION;
     break;
-    
+
   default:
     // Should not get here
     break;
@@ -1392,11 +1460,11 @@ static void humidityChangeCB( uint8 paramID )
 static void gyroChangeCB( uint8 paramID )
 {
   uint8 newValue;
-  
+
   switch (paramID) {
   case SENSOR_CONF:
     Gyro_GetParameter( SENSOR_CONF, &newValue );
-    
+
     if (newValue == 0)
     {
       // All three axes off, put sensor to sleep
@@ -1415,12 +1483,12 @@ static void gyroChangeCB( uint8 paramID )
       osal_set_event( sensorTag_TaskID,  ST_GYROSCOPE_SENSOR_EVT);
     }
     break;
-    
+
   case SENSOR_PERI:
     Gyro_GetParameter( SENSOR_PERI, &newValue );
     sensorGyrPeriod = newValue*SENSOR_PERIOD_RESOLUTION;
     break;
-    
+
   default:
     // Should not get here
     break;

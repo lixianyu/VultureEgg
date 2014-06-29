@@ -75,6 +75,8 @@ extern "C"
  */
 bool   HalSensorReadReg(uint8 addr, uint8 *pBuf, uint8 nBytes);
 bool   HalSensorWriteReg(uint8 addr, uint8 *pBuf, uint8 nBytes);
+int8   HalSensorReadReg1(uint8 addr, uint8 *pBuf, uint8 nBytes);
+bool   HalSensorWriteReg1(uint8 addr, uint8 *pBuf, uint8 nBytes);
 uint16 HalSensorTest(void);
 void   HalDcDcControl(uint8 sensorID, bool powerOn);
 
