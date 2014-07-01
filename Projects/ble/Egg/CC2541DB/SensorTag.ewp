@@ -466,6 +466,7 @@
           <state>$PROJ_DIR$\..\..\Profiles\SensorProfile</state>
           <state>$PROJ_DIR$\..\..\Profiles\Keys</state>
           <state>$PROJ_DIR$\..\..\Profiles\DevInfo</state>
+          <state>$PROJ_DIR$\..\..\Profiles\EggProfile</state>
         </option>
         <option>
           <name>CCStdIncCheck</name>
@@ -3231,7 +3232,7 @@
       <name>$PROJ_DIR$\..\Source\SensorTag.c</name>
     </file>
     <file>
-      <name>$PROJ_DIR$\..\Source\SensorTag.h</name>
+      <name>$PROJ_DIR$\..\Source\sensorTag.h</name>
     </file>
     <file>
       <name>$PROJ_DIR$\..\Source\SensorTag_Main.c</name>
@@ -3523,6 +3524,12 @@
     </file>
     <file>
       <name>$PROJ_DIR$\..\..\Profiles\SensorProfile\magnetometerservice.h</name>
+    </file>
+    <file>
+      <name>$PROJ_DIR$\..\..\Profiles\EggProfile\mpu6050service.c</name>
+    </file>
+    <file>
+      <name>$PROJ_DIR$\..\..\Profiles\EggProfile\mpu6050service.h</name>
     </file>
     <file>
       <name>$PROJ_DIR$\..\..\Profiles\OAD\oad.h</name>

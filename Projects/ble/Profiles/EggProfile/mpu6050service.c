@@ -1,40 +1,10 @@
 /**************************************************************************************************
-  Filename:       accelerometerservice.c
-  Revised:        $Date: 2013-08-23 11:45:31 -0700 (Fri, 23 Aug 2013) $
+  Filename:       mpu6050service.c
+  Revised:        $Date: 2014-06-30 22:50:31 +0800 (Mon, 30 Jue 2014) $
   Revision:       $Revision: 35100 $
 
-  Description:    Accelerometer service.
+  Description:    mpu6050 service.
 
-
-  Copyright 2012-2013  Texas Instruments Incorporated. All rights reserved.
-
-  IMPORTANT: Your use of this Software is limited to those specific rights
-  granted under the terms of a software license agreement between the user
-  who downloaded the software, his/her employer (which must be your employer)
-  and Texas Instruments Incorporated (the "License").  You may not use this
-  Software unless you agree to abide by the terms of the License. The License
-  limits your use, and you acknowledge, that the Software may not be modified,
-  copied or distributed unless embedded on a Texas Instruments microcontroller
-  or used solely and exclusively in conjunction with a Texas Instruments radio
-  frequency transceiver, which is integrated into your product.  Other than for
-  the foregoing purpose, you may not use, reproduce, copy, prepare derivative
-  works of, modify, distribute, perform, display or sell this Software and/or
-  its documentation for any purpose.
-
-  YOU FURTHER ACKNOWLEDGE AND AGREE THAT THE SOFTWARE AND DOCUMENTATION ARE
-  PROVIDED “AS IS” WITHOUT WARRANTY OF ANY KIND, EITHER EXPRESS OR IMPLIED,
-  INCLUDING WITHOUT LIMITATION, ANY WARRANTY OF MERCHANTABILITY, TITLE,
-  NON-INFRINGEMENT AND FITNESS FOR A PARTICULAR PURPOSE. IN NO EVENT SHALL
-  TEXAS INSTRUMENTS OR ITS LICENSORS BE LIABLE OR OBLIGATED UNDER CONTRACT,
-  NEGLIGENCE, STRICT LIABILITY, CONTRIBUTION, BREACH OF WARRANTY, OR OTHER
-  LEGAL EQUITABLE THEORY ANY DIRECT OR INDIRECT DAMAGES OR EXPENSES
-  INCLUDING BUT NOT LIMITED TO ANY INCIDENTAL, SPECIAL, INDIRECT, PUNITIVE
-  OR CONSEQUENTIAL DAMAGES, LOST PROFITS OR LOST DATA, COST OF PROCUREMENT
-  OF SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
-  (INCLUDING BUT NOT LIMITED TO ANY DEFENSE THEREOF), OR OTHER SIMILAR COSTS.
-
-  Should you have any questions regarding your right to use this Software,
-  contact Texas Instruments Incorporated at www.TI.com.
 **************************************************************************************************/
 
 /*********************************************************************
@@ -46,7 +16,7 @@
 #include "gatt_uuid.h"
 #include "gattservapp.h"
 
-#include "accelerometerservice.h"
+#include "mpu6050service.h"
 #include "st_util.h"
 
 /*********************************************************************
@@ -58,17 +28,17 @@
  */
 
 /* Service configuration values */
-#define SENSOR_SERVICE_UUID     ACCELEROMETER_SERV_UUID
-#define SENSOR_DATA_UUID        ACCELEROMETER_DATA_UUID
-#define SENSOR_CONFIG_UUID      ACCELEROMETER_CONF_UUID
-#define SENSOR_PERIOD_UUID      ACCELEROMETER_PERI_UUID
+#define SENSOR_SERVICE_UUID     MPU6050_SERV_UUID
+#define SENSOR_DATA_UUID        MPU6050_DATA_UUID
+#define SENSOR_CONFIG_UUID      MPU6050_CONF_UUID
+#define SENSOR_PERIOD_UUID      MPU6050_PERI_UUID
 
-#define SENSOR_SERVICE          ACCELEROMETER_SERVICE
-#define SENSOR_DATA_LEN         ACCELEROMETER_DATA_LEN
+#define SENSOR_SERVICE          MPU6050_SERVICE
+#define SENSOR_DATA_LEN         MPU6050_DATA_LEN
 
-#define SENSOR_DATA_DESCR       "Accel. Data"
-#define SENSOR_CONFIG_DESCR     "Accel. Conf."
-#define SENSOR_PERIOD_DESCR     "Accel. Period"
+#define SENSOR_DATA_DESCR       "Mpu6050. Data"
+#define SENSOR_CONFIG_DESCR     "Mpu6050. Conf."
+#define SENSOR_PERIOD_DESCR     "Mpu6050. Period"
 
 /*********************************************************************
  * TYPEDEFS
@@ -125,7 +95,7 @@ static sensorCBs_t *sensor_AppCBs = NULL;
 static CONST gattAttrType_t sensorService = { TI_UUID_SIZE, sensorServiceUUID };
 
 // Characteristic Value: data
-static uint8 sensorData[SENSOR_DATA_LEN] = { 0, 0, 0};
+static uint8 sensorData[SENSOR_DATA_LEN] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,};
 
 // Characteristic Properties: data
 static uint8 sensorDataProps = GATT_PROP_READ | GATT_PROP_NOTIFY;
@@ -143,13 +113,13 @@ static uint8 sensorCfgProps = GATT_PROP_READ | GATT_PROP_WRITE;
 static uint8 sensorCfg = 0;
 
 // Characteristic User Description: configuration
-static uint8 sensorCfgUserDescr[] = SENSOR_CONFIG_DESCR; 
+static uint8 sensorCfgUserDescr[] = SENSOR_CONFIG_DESCR;
 
 // Characteristic Properties: period
 static uint8 sensorPeriodProps = GATT_PROP_READ | GATT_PROP_WRITE;
 
 // Characteristic Value: period
-static uint8 sensorPeriod = SENSOR_MIN_UPDATE_PERIOD / SENSOR_PERIOD_RESOLUTION;
+static uint16 sensorPeriod = 200; // ms
 
 // Characteristic User Description: period
 static uint8 sensorPeriodUserDescr[] = SENSOR_PERIOD_DESCR;
@@ -237,7 +207,7 @@ static gattAttribute_t sensorAttrTable[] =
         { TI_UUID_SIZE, sensorPeriodUUID },
         GATT_PERMIT_READ | GATT_PERMIT_WRITE,
         0,
-        &sensorPeriod
+        (uint8*)&sensorPeriod
       },
 
       // Characteristic User Description "Period"
@@ -276,7 +246,7 @@ static CONST gattServiceCBs_t sensorCBs =
  */
 
 /*********************************************************************
- * @fn      Accel_AddService
+ * @fn      Mpu6050_AddService
  *
  * @brief   Initializes the Sensor Profile service by registering
  *          GATT attributes with the GATT server.
@@ -286,7 +256,7 @@ static CONST gattServiceCBs_t sensorCBs =
  *
  * @return  Success or Failure
  */
-bStatus_t Accel_AddService( uint32 services )
+bStatus_t Mpu6050_AddService( uint32 services )
 {
   uint8 status = SUCCESS;
 
@@ -307,7 +277,7 @@ bStatus_t Accel_AddService( uint32 services )
 
 
 /*********************************************************************
- * @fn      Accel_RegisterAppCBs
+ * @fn      Mpu6050_RegisterAppCBs
  *
  * @brief   Registers the application callback function. Only call
  *          this function once.
@@ -316,7 +286,7 @@ bStatus_t Accel_AddService( uint32 services )
  *
  * @return  SUCCESS or bleAlreadyInRequestedMode
  */
-bStatus_t Accel_RegisterAppCBs( sensorCBs_t *appCallbacks )
+bStatus_t Mpu6050_RegisterAppCBs( sensorCBs_t *appCallbacks )
 {
   if ( sensor_AppCBs == NULL )
   {
@@ -332,7 +302,7 @@ bStatus_t Accel_RegisterAppCBs( sensorCBs_t *appCallbacks )
 }
 
 /*********************************************************************
- * @fn      Accel_SetParameter
+ * @fn      Mpu6050_SetParameter
  *
  * @brief   Set a parameter.
  *
@@ -345,7 +315,7 @@ bStatus_t Accel_RegisterAppCBs( sensorCBs_t *appCallbacks )
  *
  * @return  bStatus_t
  */
-bStatus_t Accel_SetParameter( uint8 param, uint8 len, void *value )
+bStatus_t Mpu6050_SetParameter( uint8 param, uint8 len, void *value )
 {
   bStatus_t ret = SUCCESS;
 
@@ -378,9 +348,9 @@ bStatus_t Accel_SetParameter( uint8 param, uint8 len, void *value )
       break;
 
     case SENSOR_PERI:
-      if ( len == sizeof ( uint8 ) )
+      if ( len == sizeof ( uint16 ) )
       {
-        sensorPeriod = *((uint8*)value);
+        sensorPeriod = *((uint16*)value);
       }
       else
       {
@@ -397,7 +367,7 @@ bStatus_t Accel_SetParameter( uint8 param, uint8 len, void *value )
 }
 
 /*********************************************************************
- * @fn      Accel_GetParameter
+ * @fn      Mpu6050_GetParameter
  *
  * @brief   Get a Sensor Profile parameter.
  *
@@ -409,7 +379,7 @@ bStatus_t Accel_SetParameter( uint8 param, uint8 len, void *value )
  *
  * @return  bStatus_t
  */
-bStatus_t Accel_GetParameter( uint8 param, void *value )
+bStatus_t Mpu6050_GetParameter( uint8 param, void *value )
 {
   bStatus_t ret = SUCCESS;
 
@@ -424,7 +394,7 @@ bStatus_t Accel_GetParameter( uint8 param, void *value )
       break;
 
     case SENSOR_PERI:
-      *((uint8*)value) = sensorPeriod;
+      *((uint16*)value) = sensorPeriod;
       break;
 
     default:
@@ -484,9 +454,14 @@ static uint8 sensor_ReadAttrCB( uint16 connHandle, gattAttribute_t *pAttr,
       break;
 
     case SENSOR_CONFIG_UUID:
-    case SENSOR_PERIOD_UUID:
       *pLen = 1;
       pValue[0] = *pAttr->pValue;
+      break;
+
+    case SENSOR_PERIOD_UUID:
+      *pLen = 2;
+       pValue[1] = LO_UINT16( sensorPeriod );
+       pValue[0] = HI_UINT16( sensorPeriod );
       break;
 
     default:
@@ -570,7 +545,7 @@ static bStatus_t sensor_WriteAttrCB( uint16 connHandle, gattAttribute_t *pAttr,
       // Make sure it's not a blob oper
       if ( offset == 0 )
       {
-        if ( len != 1 )
+        if ( len != 2 )
         {
           status = ATT_ERR_INVALID_VALUE_SIZE;
         }
@@ -582,21 +557,14 @@ static bStatus_t sensor_WriteAttrCB( uint16 connHandle, gattAttribute_t *pAttr,
       // Write the value
       if ( status == SUCCESS )
       {
-        if (pValue[0]>=(SENSOR_MIN_UPDATE_PERIOD/SENSOR_PERIOD_RESOLUTION))
-        {
-
-          uint8 *pCurValue = (uint8 *)pAttr->pValue;
-          *pCurValue = pValue[0];
-
-          if( pAttr->pValue == &sensorPeriod )
+          uint8 *pCurValueLow = (uint8 *)pAttr->pValue;
+          uint8 *pCurValueHigh = (uint8 *)(pAttr->pValue+1);
+          *pCurValueLow = pValue[1];
+          *pCurValueHigh = pValue[0];
+          if( pAttr->pValue == (uint8*)&sensorPeriod )
           {
             notifyApp = SENSOR_PERI;
           }
-        }
-        else
-        {
-           status = ATT_ERR_INVALID_VALUE;
-        }
       }
       break;
 

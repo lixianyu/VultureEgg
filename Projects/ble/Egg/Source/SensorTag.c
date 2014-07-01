@@ -75,6 +75,7 @@
 #include "devinfoservice-st.h"
 #include "irtempservice.h"
 #include "accelerometerservice.h"
+#include "mpu6050service.h"
 #include "humidityservice.h"
 #include "magnetometerservice.h"
 #include "barometerservice.h"
@@ -120,7 +121,7 @@
 #define GYRO_STARTUP_TIME                     60    // Start-up time max. 50 ms
 
 // What is the advertising interval when device is discoverable (units of 625us, 160=100ms)
-#define DEFAULT_ADVERTISING_INTERVAL          169
+#define DEFAULT_ADVERTISING_INTERVAL          1600
 
 // General discoverable mode advertises indefinitely
 #define DEFAULT_DISCOVERABLE_MODE             GAP_ADTYPE_FLAGS_GENERAL
@@ -234,12 +235,17 @@ static uint8 advertData[] =
   0x02,   // length of this data
   GAP_ADTYPE_FLAGS,
   DEFAULT_DISCOVERABLE_MODE | GAP_ADTYPE_FLAGS_BREDR_NOT_SUPPORTED,
+#if 0
   0x0f,
   GAP_ADTYPE_16BIT_MORE,
+
   0x44,0x44, // This the magic number.
   0x01,0x02,0x03,0x04,// Here is Temperature.
   0x05,0x06,0x07,0x08,// Here is Humidity.
   0x09,0x0a,0x0b,0x0c,// Here is Barometer.
+#else
+  
+#endif
 };
 
 // GAP GATT Attributes
@@ -249,6 +255,7 @@ static uint8 attDeviceName[] = "Egg";
 static bool   irTempEnabled = FALSE;
 static bool   magEnabled = FALSE;
 static uint8  accConfig = ST_CFG_SENSOR_DISABLE;
+static uint8  mpu6050Config = ST_CFG_SENSOR_DISABLE;
 static bool   barEnabled = FALSE;
 static bool   humiEnabled = FALSE;
 static bool   gyroEnabled = FALSE;
@@ -289,6 +296,7 @@ static void readMPU6050DataAdv( void );
 static void barometerChangeCB( uint8 paramID );
 static void irTempChangeCB( uint8 paramID );
 static void accelChangeCB( uint8 paramID );
+static void mpu6050ChangeCB( uint8 paramID );
 static void humidityChangeCB( uint8 paramID);
 static void magnetometerChangeCB( uint8 paramID );
 static void gyroChangeCB( uint8 paramID );
@@ -333,6 +341,11 @@ static sensorCBs_t sensorTag_IrTempCBs =
 static sensorCBs_t sensorTag_AccelCBs =
 {
   accelChangeCB,            // Characteristic value change callback
+};
+
+static sensorCBs_t sensorTag_Mpu6050CBs =
+{
+  mpu6050ChangeCB,              // Characteristic value change callback
 };
 
 static sensorCBs_t sensorTag_HumidCBs =
@@ -454,11 +467,12 @@ void SensorTag_Init( uint8 task_id )
   DevInfo_AddService();                           // Device Information Service
   //IRTemp_AddService (GATT_ALL_SERVICES );         // IR Temperature Service
   //Accel_AddService (GATT_ALL_SERVICES );          // Accelerometer Service
+  Mpu6050_AddService(GATT_ALL_SERVICES);
   //Humidity_AddService (GATT_ALL_SERVICES );       // Humidity Service
   //Magnetometer_AddService( GATT_ALL_SERVICES );   // Magnetometer Service
   //Barometer_AddService( GATT_ALL_SERVICES );      // Barometer Service
   //Gyro_AddService( GATT_ALL_SERVICES );           // Gyro Service
-  SK_AddService( GATT_ALL_SERVICES );             // Simple Keys Profile
+  //SK_AddService( GATT_ALL_SERVICES );             // Simple Keys Profile
   //Test_AddService( GATT_ALL_SERVICES );           // Test Profile
   CcService_AddService( GATT_ALL_SERVICES );      // Connection Control Service
 
@@ -482,12 +496,13 @@ void SensorTag_Init( uint8 task_id )
   //HalAccInit();
   //HalBarInit();
   //HalGyroInit();
-    HalMPU6050initialize();
-  
+  //HalMPU6050initialize();
+
   // Register callbacks with profile
   //VOID IRTemp_RegisterAppCBs( &sensorTag_IrTempCBs );
   //VOID Magnetometer_RegisterAppCBs( &sensorTag_MagnetometerCBs );
   //VOID Accel_RegisterAppCBs( &sensorTag_AccelCBs );
+  VOID Mpu6050_RegisterAppCBs(&sensorTag_Mpu6050CBs);
   //VOID Humidity_RegisterAppCBs( &sensorTag_HumidCBs );
   //VOID Barometer_RegisterAppCBs( &sensorTag_BarometerCBs );
   //VOID Gyro_RegisterAppCBs( &sensorTag_GyroCBs );
@@ -555,7 +570,7 @@ uint16 SensorTag_ProcessEvent( uint8 task_id, uint16 events )
     // Start Bond Manager
     VOID GAPBondMgr_Register( &sensorTag_BondMgrCBs );
 
-    osal_start_timerEx( sensorTag_TaskID, ST_MPU6050_SENSOR_EVT, sensorMpu6050Period );
+    //osal_start_timerEx( sensorTag_TaskID, ST_MPU6050_SENSOR_EVT, sensorMpu6050Period );
     return ( events ^ ST_START_DEVICE_EVT );
   }
 
@@ -612,8 +627,16 @@ uint16 SensorTag_ProcessEvent( uint8 task_id, uint16 events )
   //////////////////////////
   if ( events & ST_MPU6050_SENSOR_EVT )
   {
-    readMPU6050DataAdv();
-    osal_start_timerEx( sensorTag_TaskID, ST_MPU6050_SENSOR_EVT, sensorMpu6050Period );
+    if(mpu6050Config != ST_CFG_SENSOR_DISABLE)
+    {
+        readMPU6050DataAdv();
+        osal_start_timerEx( sensorTag_TaskID, ST_MPU6050_SENSOR_EVT, sensorMpu6050Period );
+    }
+    else
+    {
+        //TODO : sleep the MPU6050.
+        
+    }
     return (events ^ ST_MPU6050_SENSOR_EVT);
   }
 
@@ -916,6 +939,7 @@ static void sensorTag_HandleKeys( uint8 shift, uint8 keys )
  */
 static void resetSensorSetup (void)
 {
+/*
   if (HalIRTempStatus()!=TMP006_OFF || irTempEnabled)
   {
     HalIRTempTurnOff();
@@ -926,7 +950,12 @@ static void resetSensorSetup (void)
   {
     accConfig = ST_CFG_SENSOR_DISABLE;
   }
-
+*/
+  if (mpu6050Config != ST_CFG_SENSOR_DISABLE)
+  {
+    mpu6050Config = ST_CFG_SENSOR_DISABLE;
+  }
+/*
   if (HalMagStatus()!=MAG3110_OFF || magEnabled)
   {
     HalMagTurnOff();
@@ -955,9 +984,9 @@ static void resetSensorSetup (void)
   sensorGyroAxes = 0;
   sensorGyroUpdateAxes = FALSE;
   testMode = FALSE;
-
+*/
   // Reset all characteristics values
-  resetCharacteristicValues();
+  //resetCharacteristicValues();
 }
 
 
@@ -1036,6 +1065,34 @@ static void readAccData(void)
   {
     Accel_SetParameter( SENSOR_DATA, ACCELEROMETER_DATA_LEN, aData);
   }
+}
+
+static void readMPU6050DataAdv( void )
+{
+    int16 ax,ay,az,gx,gy,gz;
+    uint8 *p = (uint8*)&ax;
+    uint8 buffers[MPU6050_DATA_LEN];
+    HalMPU6050getMotion6(&ax, &ay, &az, &gx, &gy, &gz);
+
+    buffers[0] = *(p+1);
+    buffers[1] = *p;
+    p = (uint8*)&ay;
+    buffers[2] = *(p+1);
+    buffers[3] = *p;
+    p = (uint8*)&az;
+    buffers[4] = *(p+1);
+    buffers[5] = *p;
+    p = (uint8*)&gx;
+    buffers[6] = *(p+1);
+    buffers[7] = *p;
+    p = (uint8*)&gy;
+    buffers[8] = *(p+1);
+    buffers[9] = *p;
+    p = (uint8*)&gz;
+    buffers[10] = *(p+1);
+    buffers[11] = *p;
+    //GAPRole_SetParameter( GAPROLE_ADVERT_DATA, sizeof( advertData ), advertData );
+    Mpu6050_SetParameter(SENSOR_DATA, MPU6050_DATA_LEN, buffers);
 }
 
 /*********************************************************************
@@ -1149,35 +1206,6 @@ static void readIrTempDataAdv( void )
     advertData[10] = tData[3];
     GAPRole_SetParameter( GAPROLE_ADVERT_DATA, sizeof( advertData ), advertData );
   }
-}
-
-static void readMPU6050DataAdv( void )
-{
-  int16 ax,ay,az,gx,gy,gz;
-  uint8 *p = (uint8*)&ax;
-
-  HalMPU6050getMotion6(&ax, &ay, &az, &gx, &gy, &gz);
-
-    //IRTemp_SetParameter( SENSOR_DATA, IRTEMPERATURE_DATA_LEN, tData);
-    //p = (uint8*)(&ax);
-    advertData[7] = *(p+1);
-    advertData[8] = *p;
-    p = (uint8*)&ay;
-    advertData[9] = *(p+1);
-    advertData[10] = *p;
-    p = (uint8*)&az;
-    advertData[11] = *(p+1);
-    advertData[12] = *p;
-    p = (uint8*)&gx;
-    advertData[13] = *(p+1);
-    advertData[14] = *p;
-    p = (uint8*)&gy;
-    advertData[15] = *(p+1);
-    advertData[16] = *p;
-    p = (uint8*)&gz;
-    advertData[17] = *(p+1);
-    advertData[18] = *p;
-    GAPRole_SetParameter( GAPROLE_ADVERT_DATA, sizeof( advertData ), advertData );
 }
 
 /*********************************************************************
@@ -1351,6 +1379,47 @@ static void accelChangeCB( uint8 paramID )
       break;
   }
 }
+
+static void mpu6050ChangeCB( uint8 paramID )
+{
+  uint8 newValue;
+
+  switch (paramID)
+  {
+    case SENSOR_CONF:
+      Mpu6050_GetParameter( SENSOR_CONF, &newValue );
+      if ( newValue == ST_CFG_SENSOR_DISABLE)
+      {
+        // Put sensor to sleep
+        if (mpu6050Config != ST_CFG_SENSOR_DISABLE)
+        {
+          mpu6050Config = ST_CFG_SENSOR_DISABLE;
+          osal_set_event( sensorTag_TaskID, ST_MPU6050_SENSOR_EVT);
+        }
+      }
+      else
+      {
+        if (mpu6050Config == ST_CFG_SENSOR_DISABLE)
+        {
+          // Start scheduling only on change disabled -> enabled
+          osal_set_event( sensorTag_TaskID, ST_MPU6050_SENSOR_EVT);
+        }
+        // Scheduled already, so just change range
+        mpu6050Config = newValue;
+        HalMPU6050initialize();
+      }
+      break;
+
+    case SENSOR_PERI:
+      Mpu6050_GetParameter( SENSOR_PERI, &sensorMpu6050Period );
+      break;
+
+    default:
+      // Should not get here
+      break;
+  }
+}
+
 
 /*********************************************************************
  * @fn      magnetometerChangeCB
