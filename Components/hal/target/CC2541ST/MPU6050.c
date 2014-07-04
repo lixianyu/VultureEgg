@@ -2975,8 +2975,8 @@ bool HalMPU6050writeMemoryBlock(const uint8_t *data, uint16_t dataSize, uint8_t 
     uint8_t *progBuffer;
     uint16_t i;
     uint8_t j;
-    if (verify) verifyBuffer = (uint8_t *)malloc(MPU6050_DMP_MEMORY_CHUNK_SIZE);
-    if (useProgMem) progBuffer = (uint8_t *)malloc(MPU6050_DMP_MEMORY_CHUNK_SIZE);
+    if (verify) verifyBuffer = (uint8_t *)osal_mem_alloc(MPU6050_DMP_MEMORY_CHUNK_SIZE);
+    if (useProgMem) progBuffer = (uint8_t *)osal_mem_alloc(MPU6050_DMP_MEMORY_CHUNK_SIZE);
     for (i = 0; i < dataSize;) {
         // determine correct chunk size according to bank position and data size
         chunkSize = MPU6050_DMP_MEMORY_CHUNK_SIZE;
@@ -3020,8 +3020,8 @@ bool HalMPU6050writeMemoryBlock(const uint8_t *data, uint16_t dataSize, uint8_t 
                     Serial.print(verifyBuffer[i + j], HEX);
                 }
                 Serial.print("\n");*/
-                free(verifyBuffer);
-                if (useProgMem) free(progBuffer);
+                osal_mem_free(verifyBuffer);
+                if (useProgMem) osal_mem_free(progBuffer);
                 return false; // uh oh.
             }
         }
@@ -3039,18 +3039,18 @@ bool HalMPU6050writeMemoryBlock(const uint8_t *data, uint16_t dataSize, uint8_t 
             HalMPU6050setMemoryStartAddress(address);
         }
     }
-    if (verify) free(verifyBuffer);
-    if (useProgMem) free(progBuffer);
+    if (verify) osal_mem_free(verifyBuffer);
+    if (useProgMem) osal_mem_free(progBuffer);
     return true;
 }
 bool HalMPU6050writeProgMemoryBlock(const uint8_t *data, uint16_t dataSize, uint8_t bank, uint8_t address, bool verify) {
-    return writeMemoryBlock(data, dataSize, bank, address, verify, true);
+    return HalMPU6050writeMemoryBlock(data, dataSize, bank, address, verify, true);
 }
 bool HalMPU6050writeDMPConfigurationSet(const uint8_t *data, uint16_t dataSize, bool useProgMem) {
     uint8_t *progBuffer, success, special;
     uint16_t i, j;
     if (useProgMem) {
-        progBuffer = (uint8_t *)malloc(8); // assume 8-byte blocks, realloc later if necessary
+        progBuffer = (uint8_t *)osal_mem_alloc(8); // assume 8-byte blocks, realloc later if necessary
     }
 
     // config set data is a long string of blocks with the following structure:
@@ -3114,11 +3114,11 @@ bool HalMPU6050writeDMPConfigurationSet(const uint8_t *data, uint16_t dataSize, 
         }
 
         if (!success) {
-            if (useProgMem) free(progBuffer);
+            if (useProgMem) osal_mem_free(progBuffer);
             return false; // uh oh
         }
     }
-    if (useProgMem) free(progBuffer);
+    if (useProgMem) osal_mem_free(progBuffer);
     return true;
 }
 bool HalMPU6050writeProgDMPConfigurationSet(const uint8_t *data, uint16_t dataSize) {

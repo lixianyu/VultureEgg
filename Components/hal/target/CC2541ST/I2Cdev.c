@@ -46,6 +46,7 @@ THE SOFTWARE.
 #include "hal_i2c.h"
 #include "hal_sensor.h"
 
+#define CLOCK_HZ i2cClock_267KHZ
 static int8_t readBit(uint8_t devAddr, uint8_t regAddr, uint8_t bitNum, uint8_t *data);
 static int8_t readBitW(uint8_t devAddr, uint8_t regAddr, uint8_t bitNum, uint16_t *data);
 static int8_t readBits(uint8_t devAddr, uint8_t regAddr, uint8_t bitStart, uint8_t length, uint8_t *data);
@@ -201,7 +202,7 @@ static int8_t readWord(uint8_t devAddr, uint8_t regAddr, uint16_t *data) {
  */
 static int8_t readBytes(uint8_t devAddr, uint8_t regAddr, uint8_t length, uint8_t *data) {
     int8_t count = 0;
-    HalI2CInit(MPU6050_DEFAULT_ADDRESS, i2cClock_533KHZ);
+    HalI2CInit(MPU6050_DEFAULT_ADDRESS, CLOCK_HZ);
     count = HalSensorReadReg1(regAddr, data, length);
     return count;
 }
@@ -216,7 +217,7 @@ static int8_t readBytes(uint8_t devAddr, uint8_t regAddr, uint8_t length, uint8_
  */
 static int8_t readWords(uint8_t devAddr, uint8_t regAddr, uint8_t length, uint16_t *data) {
     int8_t count = 0;
-    HalI2CInit(MPU6050_DEFAULT_ADDRESS, i2cClock_533KHZ);
+    HalI2CInit(MPU6050_DEFAULT_ADDRESS, CLOCK_HZ);
     count = HalSensorReadReg1(regAddr, (uint8*)data, length*2);
     return count;
 }
@@ -336,7 +337,7 @@ static bool writeWord(uint8_t devAddr, uint8_t regAddr, uint16_t data) {
  */
 static bool writeBytes(uint8_t devAddr, uint8_t regAddr, uint8_t length, uint8_t* data) {
     bool status = 0;
-    HalI2CInit(MPU6050_DEFAULT_ADDRESS, i2cClock_533KHZ);
+    HalI2CInit(MPU6050_DEFAULT_ADDRESS, CLOCK_HZ);
     status = HalSensorWriteReg(regAddr, data, length);
     return status;
 }
@@ -350,7 +351,7 @@ static bool writeBytes(uint8_t devAddr, uint8_t regAddr, uint8_t length, uint8_t
  */
 static bool writeWords(uint8_t devAddr, uint8_t regAddr, uint8_t length, uint16_t* data) {
     bool status = 0;
-    HalI2CInit(MPU6050_DEFAULT_ADDRESS, i2cClock_533KHZ);
+    HalI2CInit(MPU6050_DEFAULT_ADDRESS, CLOCK_HZ);
     status = HalSensorWriteReg(regAddr, (uint8*)data, length*2);
     return status;
 }

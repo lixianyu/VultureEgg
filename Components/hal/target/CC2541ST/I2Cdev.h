@@ -51,7 +51,7 @@ typedef uint8   uint8_t;    //!< Unsigned 8 bit integer
 typedef int16  int16_t;    //!< Signed 16 bit integer
 typedef uint16  uint16_t;   //!< Unsigned 16 bit integer
 
-//typedef signed   long   int32;    //!< Signed 32 bit integer
+typedef int32  int32_t;    //!< Signed 32 bit integer
 typedef uint32   uint32_t;   //!< Unsigned 32 bit integer
 
 //typedef unsigned char   bool;     //!< Boolean data type

@@ -753,13 +753,19 @@ extern void HalMPU6050setMemoryStartAddress(uint8_t address);
         // MEM_R_W register
 extern uint8_t HalMPU6050readMemoryByte();
 extern void HalMPU6050writeMemoryByte(uint8_t data);
+
 //extern void HalMPU6050readMemoryBlock(uint8_t *data, uint16_t dataSize, uint8_t bank=0, uint8_t address=0);
 extern void HalMPU6050readMemoryBlock(uint8_t *data, uint16_t dataSize, uint8_t bank, uint8_t address);
+
 //extern bool HalMPU6050writeMemoryBlock(const uint8_t *data, uint16_t dataSize, uint8_t bank=0, uint8_t address=0, bool verify=true, bool useProgMem=false);
+extern bool HalMPU6050writeMemoryBlock(const uint8_t *data, uint16_t dataSize, uint8_t bank, uint8_t address, bool verify, bool useProgMem);
+
 //extern bool HalMPU6050writeProgMemoryBlock(const uint8_t *data, uint16_t dataSize, uint8_t bank=0, uint8_t address=0, bool verify=true);
+extern bool HalMPU6050writeProgMemoryBlock(const uint8_t *data, uint16_t dataSize, uint8_t bank, uint8_t address, bool verify);
 
 //extern bool HalMPU6050writeDMPConfigurationSet(const uint8_t *data, uint16_t dataSize, bool useProgMem=false);
 extern bool HalMPU6050writeDMPConfigurationSet(const uint8_t *data, uint16_t dataSize, bool useProgMem);
+
 extern bool HalMPU6050writeProgDMPConfigurationSet(const uint8_t *data, uint16_t dataSize);
 
         // DMP_CFG_1 register
@@ -789,6 +795,7 @@ extern void HalMPU6050setDMPConfig2(uint8_t config);
             //uint8_t dmpUnregisterFIFORateProcess(inv_obj_func func);
     extern uint8_t HalMPU6050dmpRunFIFORateProcesses();
 
+/*
             // Setup FIFO for various output
     extern uint8_t HalMPU6050dmpSendQuaternion(uint_fast16_t accuracy);
     extern uint8_t HalMPU6050dmpSendGyro(uint_fast16_t elements, uint_fast16_t accuracy);
@@ -802,63 +809,64 @@ extern void HalMPU6050setDMPConfig2(uint8_t config);
     extern uint8_t HalMPU6050dmpSendPacketNumber(uint_fast16_t accuracy);
     extern uint8_t HalMPU6050dmpSendQuantizedAccel(uint_fast16_t elements, uint_fast16_t accuracy);
     extern uint8_t HalMPU6050dmpSendEIS(uint_fast16_t elements, uint_fast16_t accuracy);
-
+*/
             // Get Fixed Point data from FIFO
-    extern uint8_t HalMPU6050dmpGetAccel(int32_t *data, const uint8_t* packet=0);
-    extern uint8_t HalMPU6050dmpGetAccel(int16_t *data, const uint8_t* packet=0);
-    extern uint8_t HalMPU6050dmpGetAccel(VectorInt16 *v, const uint8_t* packet=0);
-    extern uint8_t HalMPU6050dmpGetQuaternion(int32_t *data, const uint8_t* packet=0);
-    extern uint8_t HalMPU6050dmpGetQuaternion(int16_t *data, const uint8_t* packet=0);
-    extern uint8_t HalMPU6050dmpGetQuaternion(Quaternion *q, const uint8_t* packet=0);
-    extern uint8_t HalMPU6050dmpGet6AxisQuaternion(int32_t *data, const uint8_t* packet=0);
-    extern uint8_t HalMPU6050dmpGet6AxisQuaternion(int16_t *data, const uint8_t* packet=0);
-    extern uint8_t HalMPU6050dmpGet6AxisQuaternion(Quaternion *q, const uint8_t* packet=0);
-    extern uint8_t HalMPU6050dmpGetRelativeQuaternion(int32_t *data, const uint8_t* packet=0);
-    extern uint8_t HalMPU6050dmpGetRelativeQuaternion(int16_t *data, const uint8_t* packet=0);
-    extern uint8_t HalMPU6050dmpGetRelativeQuaternion(Quaternion *data, const uint8_t* packet=0);
-    extern uint8_t HalMPU6050dmpGetGyro(int32_t *data, const uint8_t* packet=0);
-    extern uint8_t HalMPU6050dmpGetGyro(int16_t *data, const uint8_t* packet=0);
-    extern uint8_t HalMPU6050dmpGetGyro(VectorInt16 *v, const uint8_t* packet=0);
+            // All packet default value is 0 --- by Phobos.
+    extern uint8_t HalMPU6050dmpGetAccel(int32_t *data, const uint8_t* packet);
+    extern uint8_t HalMPU6050dmpGetAccel(int16_t *data, const uint8_t* packet);
+    extern uint8_t HalMPU6050dmpGetAccel(VectorInt16 *v, const uint8_t* packet);
+    extern uint8_t HalMPU6050dmpGetQuaternion(int32_t *data, const uint8_t* packet);
+    extern uint8_t HalMPU6050dmpGetQuaternion(int16_t *data, const uint8_t* packet);
+    extern uint8_t HalMPU6050dmpGetQuaternion(Quaternion *q, const uint8_t* packet);
+    extern uint8_t HalMPU6050dmpGet6AxisQuaternion(int32_t *data, const uint8_t* packet);
+    extern uint8_t HalMPU6050dmpGet6AxisQuaternion(int16_t *data, const uint8_t* packet);
+    extern uint8_t HalMPU6050dmpGet6AxisQuaternion(Quaternion *q, const uint8_t* packet);
+    extern uint8_t HalMPU6050dmpGetRelativeQuaternion(int32_t *data, const uint8_t* packet);
+    extern uint8_t HalMPU6050dmpGetRelativeQuaternion(int16_t *data, const uint8_t* packet);
+    extern uint8_t HalMPU6050dmpGetRelativeQuaternion(Quaternion *data, const uint8_t* packet);
+    extern uint8_t HalMPU6050dmpGetGyro(int32_t *data, const uint8_t* packet);
+    extern uint8_t HalMPU6050dmpGetGyro(int16_t *data, const uint8_t* packet);
+    extern uint8_t HalMPU6050dmpGetGyro(VectorInt16 *v, const uint8_t* packet);
     extern uint8_t HalMPU6050dmpSetLinearAccelFilterCoefficient(float coef);
-    extern uint8_t HalMPU6050dmpGetLinearAccel(int32_t *data, const uint8_t* packet=0);
-    extern uint8_t HalMPU6050dmpGetLinearAccel(int16_t *data, const uint8_t* packet=0);
-    extern uint8_t HalMPU6050dmpGetLinearAccel(VectorInt16 *v, const uint8_t* packet=0);
+    extern uint8_t HalMPU6050dmpGetLinearAccel(int32_t *data, const uint8_t* packet);
+    extern uint8_t HalMPU6050dmpGetLinearAccel(int16_t *data, const uint8_t* packet);
+    extern uint8_t HalMPU6050dmpGetLinearAccel(VectorInt16 *v, const uint8_t* packet);
     extern uint8_t HalMPU6050dmpGetLinearAccel(VectorInt16 *v, VectorInt16 *vRaw, VectorFloat *gravity);
-    extern uint8_t HalMPU6050dmpGetLinearAccelInWorld(int32_t *data, const uint8_t* packet=0);
-    extern uint8_t HalMPU6050dmpGetLinearAccelInWorld(int16_t *data, const uint8_t* packet=0);
-    extern uint8_t HalMPU6050dmpGetLinearAccelInWorld(VectorInt16 *v, const uint8_t* packet=0);
+    extern uint8_t HalMPU6050dmpGetLinearAccelInWorld(int32_t *data, const uint8_t* packet);
+    extern uint8_t HalMPU6050dmpGetLinearAccelInWorld(int16_t *data, const uint8_t* packet);
+    extern uint8_t HalMPU6050dmpGetLinearAccelInWorld(VectorInt16 *v, const uint8_t* packet);
     extern uint8_t HalMPU6050dmpGetLinearAccelInWorld(VectorInt16 *v, VectorInt16 *vReal, Quaternion *q);
-    extern uint8_t HalMPU6050dmpGetGyroAndAccelSensor(int32_t *data, const uint8_t* packet=0);
-    extern uint8_t HalMPU6050dmpGetGyroAndAccelSensor(int16_t *data, const uint8_t* packet=0);
-    extern uint8_t HalMPU6050dmpGetGyroAndAccelSensor(VectorInt16 *g, VectorInt16 *a, const uint8_t* packet=0);
-    extern uint8_t HalMPU6050dmpGetGyroSensor(int32_t *data, const uint8_t* packet=0);
-    extern uint8_t HalMPU6050dmpGetGyroSensor(int16_t *data, const uint8_t* packet=0);
-    extern uint8_t HalMPU6050dmpGetGyroSensor(VectorInt16 *v, const uint8_t* packet=0);
-    extern uint8_t HalMPU6050dmpGetControlData(int32_t *data, const uint8_t* packet=0);
-    extern uint8_t HalMPU6050dmpGetTemperature(int32_t *data, const uint8_t* packet=0);
-    extern uint8_t HalMPU6050dmpGetGravity(int32_t *data, const uint8_t* packet=0);
-    extern uint8_t HalMPU6050dmpGetGravity(int16_t *data, const uint8_t* packet=0);
-    extern uint8_t HalMPU6050dmpGetGravity(VectorInt16 *v, const uint8_t* packet=0);
+    extern uint8_t HalMPU6050dmpGetGyroAndAccelSensor(int32_t *data, const uint8_t* packet);
+    extern uint8_t HalMPU6050dmpGetGyroAndAccelSensor(int16_t *data, const uint8_t* packet);
+    extern uint8_t HalMPU6050dmpGetGyroAndAccelSensor(VectorInt16 *g, VectorInt16 *a, const uint8_t* packet);
+    extern uint8_t HalMPU6050dmpGetGyroSensor(int32_t *data, const uint8_t* packet);
+    extern uint8_t HalMPU6050dmpGetGyroSensor(int16_t *data, const uint8_t* packet);
+    extern uint8_t HalMPU6050dmpGetGyroSensor(VectorInt16 *v, const uint8_t* packet);
+    extern uint8_t HalMPU6050dmpGetControlData(int32_t *data, const uint8_t* packet);
+    extern uint8_t HalMPU6050dmpGetTemperature(int32_t *data, const uint8_t* packet);
+    extern uint8_t HalMPU6050dmpGetGravity(int32_t *data, const uint8_t* packet);
+    extern uint8_t HalMPU6050dmpGetGravity(int16_t *data, const uint8_t* packet);
+    extern uint8_t HalMPU6050dmpGetGravity(VectorInt16 *v, const uint8_t* packet);
     extern uint8_t HalMPU6050dmpGetGravity(VectorFloat *v, Quaternion *q);
-    extern uint8_t HalMPU6050dmpGetUnquantizedAccel(int32_t *data, const uint8_t* packet=0);
-    extern uint8_t HalMPU6050dmpGetUnquantizedAccel(int16_t *data, const uint8_t* packet=0);
-    extern uint8_t HalMPU6050dmpGetUnquantizedAccel(VectorInt16 *v, const uint8_t* packet=0);
-    extern uint8_t HalMPU6050dmpGetQuantizedAccel(int32_t *data, const uint8_t* packet=0);
-    extern uint8_t HalMPU6050dmpGetQuantizedAccel(int16_t *data, const uint8_t* packet=0);
-    extern uint8_t HalMPU6050dmpGetQuantizedAccel(VectorInt16 *v, const uint8_t* packet=0);
-    extern uint8_t HalMPU6050dmpGetExternalSensorData(int32_t *data, uint16_t size, const uint8_t* packet=0);
-    extern uint8_t HalMPU6050dmpGetEIS(int32_t *data, const uint8_t* packet=0);
+    extern uint8_t HalMPU6050dmpGetUnquantizedAccel(int32_t *data, const uint8_t* packet);
+    extern uint8_t HalMPU6050dmpGetUnquantizedAccel(int16_t *data, const uint8_t* packet);
+    extern uint8_t HalMPU6050dmpGetUnquantizedAccel(VectorInt16 *v, const uint8_t* packet);
+    extern uint8_t HalMPU6050dmpGetQuantizedAccel(int32_t *data, const uint8_t* packet);
+    extern uint8_t HalMPU6050dmpGetQuantizedAccel(int16_t *data, const uint8_t* packet);
+    extern uint8_t HalMPU6050dmpGetQuantizedAccel(VectorInt16 *v, const uint8_t* packet);
+    extern uint8_t HalMPU6050dmpGetExternalSensorData(int32_t *data, uint16_t size, const uint8_t* packet);
+    extern uint8_t HalMPU6050dmpGetEIS(int32_t *data, const uint8_t* packet);
 
     extern uint8_t HalMPU6050dmpGetEuler(float *data, Quaternion *q);
     extern uint8_t HalMPU6050dmpGetYawPitchRoll(float *data, Quaternion *q, VectorFloat *gravity);
 
             // Get Floating Point data from FIFO
-    extern uint8_t HalMPU6050dmpGetAccelFloat(float *data, const uint8_t* packet=0);
-    extern uint8_t HalMPU6050dmpGetQuaternionFloat(float *data, const uint8_t* packet=0);
+    extern uint8_t HalMPU6050dmpGetAccelFloat(float *data, const uint8_t* packet);
+    extern uint8_t HalMPU6050dmpGetQuaternionFloat(float *data, const uint8_t* packet);
 
     extern uint8_t HalMPU6050dmpProcessFIFOPacket(const unsigned char *dmpData);
-    extern uint8_t HalMPU6050dmpReadAndProcessFIFOPacket(uint8_t numPackets, uint8_t *processed=NULL);
-
+    //extern uint8_t HalMPU6050dmpReadAndProcessFIFOPacket(uint8_t numPackets, uint8_t *processed=NULL);
+    extern uint8_t HalMPU6050dmpReadAndProcessFIFOPacket(uint8_t numPackets, uint8_t *processed);
     extern uint8_t HalMPU6050dmpSetFIFOProcessedCallback(extern void HalMPU6050(*func) (void));
 
     extern uint8_t HalMPU6050dmpInitFIFOParam();
@@ -889,7 +897,7 @@ extern void HalMPU6050setDMPConfig2(uint8_t config);
             //uint8_t dmpRegisterFIFORateProcess(inv_obj_func func, int16_t priority);
             //uint8_t dmpUnregisterFIFORateProcess(inv_obj_func func);
     extern uint8_t HalMPU6050dmpRunFIFORateProcesses();
-
+/*
             // Setup FIFO for various output
     extern uint8_t HalMPU6050dmpSendQuaternion(uint_fast16_t accuracy);
     extern uint8_t HalMPU6050dmpSendGyro(uint_fast16_t elements, uint_fast16_t accuracy);
@@ -903,7 +911,7 @@ extern void HalMPU6050setDMPConfig2(uint8_t config);
     extern uint8_t HalMPU6050dmpSendPacketNumber(uint_fast16_t accuracy);
     extern uint8_t HalMPU6050dmpSendQuantizedAccel(uint_fast16_t elements, uint_fast16_t accuracy);
     extern uint8_t HalMPU6050dmpSendEIS(uint_fast16_t elements, uint_fast16_t accuracy);
-
+*/
             // Get Fixed Point data from FIFO
     extern uint8_t HalMPU6050dmpGetAccel(int32_t *data, const uint8_t* packet=0);
     extern uint8_t HalMPU6050dmpGetAccel(int16_t *data, const uint8_t* packet=0);
