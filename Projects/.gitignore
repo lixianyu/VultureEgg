@@ -9,5 +9,6 @@ CC2541DK-mini Keyfob Slave
 *.hex
 *.dep
 *.map
+*.sfr
 BloodPressure
 SimpleBLEPeripheral
