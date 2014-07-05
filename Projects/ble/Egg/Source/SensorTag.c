@@ -470,7 +470,7 @@ void SensorTag_Init( uint8 task_id )
   //IRTemp_AddService (GATT_ALL_SERVICES );         // IR Temperature Service
   //Accel_AddService (GATT_ALL_SERVICES );          // Accelerometer Service
   Mpu6050_AddService(GATT_ALL_SERVICES);
-  //Humidity_AddService (GATT_ALL_SERVICES );       // Humidity Service
+  Humidity_AddService (GATT_ALL_SERVICES );       // Humidity Service
   //Magnetometer_AddService( GATT_ALL_SERVICES );   // Magnetometer Service
   //Barometer_AddService( GATT_ALL_SERVICES );      // Barometer Service
   //Gyro_AddService( GATT_ALL_SERVICES );           // Gyro Service
@@ -493,7 +493,7 @@ void SensorTag_Init( uint8 task_id )
 
   // Initialise sensor drivers
   //HALIRTempInit();
-  //HalHumiInit();
+  HalHumiInit();
   //HalMagInit();
   //HalAccInit();
   //HalBarInit();
@@ -505,7 +505,7 @@ void SensorTag_Init( uint8 task_id )
   //VOID Magnetometer_RegisterAppCBs( &sensorTag_MagnetometerCBs );
   //VOID Accel_RegisterAppCBs( &sensorTag_AccelCBs );
   VOID Mpu6050_RegisterAppCBs(&sensorTag_Mpu6050CBs);
-  //VOID Humidity_RegisterAppCBs( &sensorTag_HumidCBs );
+  VOID Humidity_RegisterAppCBs( &sensorTag_HumidCBs );
   //VOID Barometer_RegisterAppCBs( &sensorTag_BarometerCBs );
   //VOID Gyro_RegisterAppCBs( &sensorTag_GyroCBs );
   //VOID Test_RegisterAppCBs( &sensorTag_TestCBs );
@@ -1509,8 +1509,7 @@ static void humidityChangeCB( uint8 paramID )
     break;
 
   case SENSOR_PERI:
-    Humidity_GetParameter( SENSOR_PERI, &newValue );
-    sensorHumPeriod = newValue*SENSOR_PERIOD_RESOLUTION;
+    Humidity_GetParameter( SENSOR_PERI, &sensorHumPeriod );
     break;
 
   default:

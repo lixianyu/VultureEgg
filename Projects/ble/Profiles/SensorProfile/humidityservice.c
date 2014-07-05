@@ -149,7 +149,7 @@ static uint8 sensorCfgUserDescr[] = SENSOR_CONFIG_DESCR;
 static uint8 sensorPeriodProps = GATT_PROP_READ | GATT_PROP_WRITE;
 
 // Characteristic Value: period
-static uint8 sensorPeriod = SENSOR_MIN_UPDATE_PERIOD / SENSOR_PERIOD_RESOLUTION;
+static uint16 sensorPeriod = 2000; // ms
 
 // Characteristic User Description: period
 static uint8 sensorPeriodUserDescr[] = SENSOR_PERIOD_DESCR;
@@ -235,7 +235,7 @@ static gattAttribute_t sensorAttrTable[] =
         { TI_UUID_SIZE, sensorPeriodUUID },
         GATT_PERMIT_READ | GATT_PERMIT_WRITE,
         0,
-        &sensorPeriod
+        (uint8*)&sensorPeriod
       },
 
       // Characteristic User Description "Period"
@@ -376,9 +376,9 @@ bStatus_t Humidity_SetParameter( uint8 param, uint8 len, void *value )
       break;
 
     case SENSOR_PERI:
-      if ( len == sizeof ( uint8 ) )
+      if ( len == sizeof ( uint16 ) )
       {
-        sensorPeriod = *((uint8*)value);
+        sensorPeriod = *((uint16*)value);
       }
       else
       {
@@ -422,7 +422,7 @@ bStatus_t Humidity_GetParameter( uint8 param, void *value )
       break;
 
     case SENSOR_PERI:
-      *((uint8*)value) = sensorPeriod;
+      *((uint16*)value) = sensorPeriod;
       break;
 
     default:
@@ -482,10 +482,15 @@ static uint8 sensor_ReadAttrCB( uint16 connHandle, gattAttribute_t *pAttr,
       break;
 
     case SENSOR_CONFIG_UUID:
-    case SENSOR_PERIOD_UUID:
       *pLen = 1;
       pValue[0] = *pAttr->pValue;
       break;
+
+    case SENSOR_PERIOD_UUID:
+        *pLen = 2;
+       pValue[1] = LO_UINT16( sensorPeriod );
+       pValue[0] = HI_UINT16( sensorPeriod );
+       break;
 
     default:
       *pLen = 0;
@@ -568,7 +573,7 @@ static bStatus_t sensor_WriteAttrCB( uint16 connHandle, gattAttribute_t *pAttr,
       // Make sure it's not a blob oper
       if ( offset == 0 )
       {
-        if ( len != 1 )
+        if ( len != 2 )
         {
           status = ATT_ERR_INVALID_VALUE_SIZE;
         }
@@ -580,21 +585,14 @@ static bStatus_t sensor_WriteAttrCB( uint16 connHandle, gattAttribute_t *pAttr,
       // Write the value
       if ( status == SUCCESS )
       {
-        if (pValue[0]>=(SENSOR_MIN_UPDATE_PERIOD/SENSOR_PERIOD_RESOLUTION))
-        {
-
-          uint8 *pCurValue = (uint8 *)pAttr->pValue;
-          *pCurValue = pValue[0];
-
-          if( pAttr->pValue == &sensorPeriod )
+          uint8 *pCurValueLow = (uint8 *)pAttr->pValue;
+          uint8 *pCurValueHigh = (uint8 *)(pAttr->pValue+1);
+          *pCurValueLow = pValue[1];
+          *pCurValueHigh = pValue[0];
+          if( pAttr->pValue == (uint8*)&sensorPeriod )
           {
             notifyApp = SENSOR_PERI;
           }
-        }
-        else
-        {
-           status = ATT_ERR_INVALID_VALUE;
-        }
       }
       break;
 

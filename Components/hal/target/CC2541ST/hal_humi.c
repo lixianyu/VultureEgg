@@ -66,8 +66,8 @@
 #define SHT21_CMD_READ_U_R         0xE7 // command read user register
 #define SHT21_CMD_SOFT_RST         0xFE // command soft reset
 
-#define HUMIDITY				           0x00
-#define TEMPERATURE			           0x01
+#define HUMIDITY				   0x00
+#define TEMPERATURE			       0x01
 
 #define USR_REG_MASK               0x38  // Mask off reserved bits (3,4,5)
 #define USR_REG_DEFAULT            0x02  // Disable OTP reload
