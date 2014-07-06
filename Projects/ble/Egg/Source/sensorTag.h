@@ -64,6 +64,7 @@ extern "C"
 #define ST_SYS_RESET_EVT                                 0x0080
 
 #define ST_MPU6050_SENSOR_EVT                            0x0100
+#define ST_DS18B20_SENSOR_EVT                            0x0200
 /*********************************************************************
  * MACROS
  */

@@ -3232,7 +3232,7 @@
       <name>$PROJ_DIR$\..\Source\SensorTag.c</name>
     </file>
     <file>
-      <name>$PROJ_DIR$\..\Source\sensorTag.h</name>
+      <name>$PROJ_DIR$\..\Source\SensorTag.h</name>
     </file>
     <file>
       <name>$PROJ_DIR$\..\Source\SensorTag_Main.c</name>
@@ -3358,6 +3358,9 @@
         <file>
           <name>$PROJ_DIR$\..\..\..\..\Components\hal\target\CC2541ST\MPU6050.c</name>
         </file>
+        <file>
+          <name>$PROJ_DIR$\..\..\..\..\Components\hal\target\CC2541ST\OneWire.c</name>
+        </file>
       </group>
       <group>
         <name>Includes</name>
@@ -3405,6 +3408,9 @@
         </file>
         <file>
           <name>$PROJ_DIR$\..\..\..\..\Components\hal\target\CC2541ST\MPU6050.h</name>
+        </file>
+        <file>
+          <name>$PROJ_DIR$\..\..\..\..\Components\hal\target\CC2541ST\OneWire.h</name>
         </file>
       </group>
     </group>
@@ -3482,6 +3488,12 @@
     </file>
     <file>
       <name>$PROJ_DIR$\..\Source\devinfoservice-st.h</name>
+    </file>
+    <file>
+      <name>$PROJ_DIR$\..\..\Profiles\EggProfile\ds18b20service.c</name>
+    </file>
+    <file>
+      <name>$PROJ_DIR$\..\..\Profiles\EggProfile\ds18b20service.h</name>
     </file>
     <file>
       <name>$PROJ_DIR$\..\..\Profiles\Roles\gap.c</name>

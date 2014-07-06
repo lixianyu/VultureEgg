@@ -50,7 +50,7 @@
 #include "hal_led.h"
 #include "hal_keys.h"
 #include "hal_i2c.h"
-
+//#include "hal_lcd.h"
 #include "gatt.h"
 #include "hci.h"
 
@@ -76,6 +76,7 @@
 #include "irtempservice.h"
 #include "accelerometerservice.h"
 #include "mpu6050service.h"
+#include "ds18b20service.h"
 #include "humidityservice.h"
 #include "magnetometerservice.h"
 #include "barometerservice.h"
@@ -95,11 +96,22 @@
 #include "hal_bar.h"
 #include "hal_gyro.h"
 #include "MPU6050.h"
+#include "OneWire.h"
 
 /*********************************************************************
  * MACROS
  */
+// LCD macros
+#if HAL_LCD == TRUE
+#define LCD_WRITE_STRING(str, option)                       HalLcdWriteString( (str), (option))
+#define LCD_WRITE_SCREEN(line1, line2)                      HalLcdWriteScreen( (line1), (line2) )
+#define LCD_WRITE_STRING_VALUE(title, value, format, line)  HalLcdWriteStringValue( (title), (value), (format), (line) )
 
+#else
+#define LCD_WRITE_STRING(str, option)
+#define LCD_WRITE_SCREEN(line1, line2)
+#define LCD_WRITE_STRING_VALUE(title, value, format, line)
+#endif
 /*********************************************************************
  * CONSTANTS
  */
@@ -112,6 +124,7 @@
 #define ACC_DEFAULT_PERIOD                    1000
 #define GYRO_DEFAULT_PERIOD                   1000
 #define MPU6050_DEFAULT_PERIOD                200
+#define DS18B20_DEFAULT_PERIOD                3000
 
 // Constants for two-stage reading
 #define TEMP_MEAS_DELAY                       275   // Conversion time 250 ms
@@ -258,6 +271,7 @@ static bool   irTempEnabled = FALSE;
 static bool   magEnabled = FALSE;
 static uint8  accConfig = ST_CFG_SENSOR_DISABLE;
 static uint8  mpu6050Config = ST_CFG_SENSOR_DISABLE;
+static bool   ds18b20Enabled = FALSE;
 static bool   barEnabled = FALSE;
 static bool   humiEnabled = FALSE;
 static bool   gyroEnabled = FALSE;
@@ -274,6 +288,7 @@ static uint16 sensorHumPeriod = HUM_DEFAULT_PERIOD;
 static uint16 sensorBarPeriod = BAR_DEFAULT_PERIOD;
 static uint16 sensorGyrPeriod = GYRO_DEFAULT_PERIOD;
 static uint16 sensorMpu6050Period = MPU6050_DEFAULT_PERIOD;
+static uint16 sensorDs18b20Period = DS18B20_DEFAULT_PERIOD;
 
 static uint8  sensorGyroAxes = 0;
 static bool   sensorGyroUpdateAxes = FALSE;
@@ -294,11 +309,12 @@ static void readBarData( void );
 static void readBarCalibration( void );
 static void readGyroData( void );
 static void readMPU6050DataAdv( void );
-
+static void readDs18b20Data( void );
 static void barometerChangeCB( uint8 paramID );
 static void irTempChangeCB( uint8 paramID );
 static void accelChangeCB( uint8 paramID );
 static void mpu6050ChangeCB( uint8 paramID );
+static void ds18b20ChangeCB( uint8 paramID );
 static void humidityChangeCB( uint8 paramID);
 static void magnetometerChangeCB( uint8 paramID );
 static void gyroChangeCB( uint8 paramID );
@@ -348,6 +364,11 @@ static sensorCBs_t sensorTag_AccelCBs =
 static sensorCBs_t sensorTag_Mpu6050CBs =
 {
   mpu6050ChangeCB,              // Characteristic value change callback
+};
+
+static sensorCBs_t sensorTag_Ds18b20CBs =
+{
+  ds18b20ChangeCB,              // Characteristic value change callback
 };
 
 static sensorCBs_t sensorTag_HumidCBs =
@@ -470,6 +491,7 @@ void SensorTag_Init( uint8 task_id )
   //IRTemp_AddService (GATT_ALL_SERVICES );         // IR Temperature Service
   //Accel_AddService (GATT_ALL_SERVICES );          // Accelerometer Service
   Mpu6050_AddService(GATT_ALL_SERVICES);
+  Ds18b20_AddService(GATT_ALL_SERVICES);
   Humidity_AddService (GATT_ALL_SERVICES );       // Humidity Service
   //Magnetometer_AddService( GATT_ALL_SERVICES );   // Magnetometer Service
   //Barometer_AddService( GATT_ALL_SERVICES );      // Barometer Service
@@ -505,6 +527,7 @@ void SensorTag_Init( uint8 task_id )
   //VOID Magnetometer_RegisterAppCBs( &sensorTag_MagnetometerCBs );
   //VOID Accel_RegisterAppCBs( &sensorTag_AccelCBs );
   VOID Mpu6050_RegisterAppCBs(&sensorTag_Mpu6050CBs);
+  VOID Ds18b20_RegisterAppCBs(&sensorTag_Ds18b20CBs);
   VOID Humidity_RegisterAppCBs( &sensorTag_HumidCBs );
   //VOID Barometer_RegisterAppCBs( &sensorTag_BarometerCBs );
   //VOID Gyro_RegisterAppCBs( &sensorTag_GyroCBs );
@@ -512,6 +535,21 @@ void SensorTag_Init( uint8 task_id )
   VOID CcService_RegisterAppCBs( &sensorTag_ccCBs );
   VOID GAPRole_RegisterAppCBs( &paramUpdateCB );
 
+  P0SEL = 0; // Configure Port 0 as GPIO
+  P1SEL = 0; // Configure Port 1 as GPIO
+  P2SEL = 0; // Configure Port 2 as GPIO
+  /*P1SEL = 0x40; // Configure Port 1 as GPIO, except P1.6 for peripheral function for buzzer
+  P2SEL = 0; // Configure Port 2 as GPIO
+
+  P0DIR = 0xFC; // Port 0 pins P0.0 and P0.1 as input (buttons),
+                // all others (P0.2-P0.7) as output
+  P1DIR = 0xFF; // All port 1 pins (P1.0-P1.7) as output
+  P2DIR = 0x1F; // All port 1 pins (P2.0-P2.4) as output
+
+  P0 = 0x03; // All pins on port 0 to low except for P0.0 and P0.1 (buttons)
+  P1 = 0;   // All pins on port 1 to low
+  P2 = 0;   // All pins on port 2 to low
+  */
   // Enable clock divide on halt
   // This reduces active current while radio is active and CC254x MCU
   // is halted
@@ -637,9 +675,27 @@ uint16 SensorTag_ProcessEvent( uint8 task_id, uint16 events )
     else
     {
         //TODO : sleep the MPU6050.
-        
+
     }
     return (events ^ ST_MPU6050_SENSOR_EVT);
+  }
+
+  //////////////////////////
+  //    DS18B20           //
+  //////////////////////////
+  if ( events & ST_DS18B20_SENSOR_EVT )
+  {
+    if(ds18b20Enabled == TRUE)
+    {
+        readDs18b20Data();
+        osal_start_timerEx( sensorTag_TaskID, ST_DS18B20_SENSOR_EVT, sensorDs18b20Period );
+    }
+    else
+    {
+        //TODO : sleep the DS18B20.
+
+    }
+    return (events ^ ST_DS18B20_SENSOR_EVT);
   }
 
   //////////////////////////
@@ -975,13 +1031,17 @@ static void resetSensorSetup (void)
     HalBarInit();
     barEnabled = FALSE;
   }
-
+*/
   if (humiEnabled)
   {
     HalHumiInit();
     humiEnabled = FALSE;
   }
-
+  if (ds18b20Enabled)
+  {
+    ds18b20Enabled = FALSE;
+  }
+/*
   // Reset internal states
   sensorGyroAxes = 0;
   sensorGyroUpdateAxes = FALSE;
@@ -1095,6 +1155,44 @@ static void readMPU6050DataAdv( void )
     buffers[11] = *p;
     //GAPRole_SetParameter( GAPROLE_ADVERT_DATA, sizeof( advertData ), advertData );
     Mpu6050_SetParameter(SENSOR_DATA, MPU6050_DATA_LEN, buffers);
+}
+
+static void readDs18b20Data( void )
+{
+  uint8 mData[DS18B20_DATA_LEN];
+
+
+  float temp = DS18B20_ReadMain(mData, DS18B20_DATA_LEN);
+  //LCD_WRITE_STRING_VALUE( "Temp Now: ", temp, 10, HAL_LCD_LINE_1 );
+#if 0
+  uint8 i;
+  uint8 present = 0;
+  uint8 data[12];
+  uint8 addr[8];
+  float celsius;
+  if (OneWire_search(addr))
+  {
+    OneWire_reset_search();
+    ST_HAL_DELAY(31250);// 250ms
+    mData[0] = 0x88;
+    mData[1] = 0x87;
+    Ds18b20_SetParameter(SENSOR_DATA, DS18B20_DATA_LEN, mData);
+    return;
+  }
+
+  OneWire_reset();
+  OneWire_select(addr);
+  OneWire_write(0x44, 1);
+  ST_HAL_DELAY(125000);
+  present = OneWire_reset();
+  OneWire_select(addr);
+  OneWire_write(0xBE, 0);
+  for (int i = 0; i < 2; i++)
+  {
+    mData[i] = OneWire_read();
+  }
+  #endif
+  Ds18b20_SetParameter(SENSOR_DATA, DS18B20_DATA_LEN, mData);
 }
 
 /*********************************************************************
@@ -1422,6 +1520,43 @@ static void mpu6050ChangeCB( uint8 paramID )
   }
 }
 
+static void ds18b20ChangeCB( uint8 paramID )
+{
+  uint8 newValue;
+
+  switch (paramID)
+  {
+    case SENSOR_CONF:
+      Ds18b20_GetParameter( SENSOR_CONF, &newValue );
+      if ( newValue == ST_CFG_SENSOR_DISABLE )
+      {
+        if(ds18b20Enabled)
+        {
+          ds18b20Enabled = FALSE;
+          osal_set_event( sensorTag_TaskID, ST_DS18B20_SENSOR_EVT);
+        }
+      }
+      else if ( newValue == ST_CFG_SENSOR_ENABLE )
+      {
+        if(!ds18b20Enabled)
+        {
+          ds18b20Enabled = TRUE;
+          osal_set_event( sensorTag_TaskID, ST_DS18B20_SENSOR_EVT);
+          //LCD_WRITE_STRING( "Let start DS18B20...", HAL_LCD_LINE_1 );
+          OneWire_reset_search();
+        }
+      }
+      break;
+
+    case SENSOR_PERI:
+      Ds18b20_GetParameter( SENSOR_PERI, &sensorDs18b20Period );
+      break;
+
+    default:
+      // Should not get here
+      break;
+  }
+}
 
 /*********************************************************************
  * @fn      magnetometerChangeCB

@@ -33,9 +33,10 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ===============================================
 */
-
+#include <stddef.h>
+#include <string.h>
 #include "MPU6050.h"
-//#include "I2Cdev.h"
+#include "OSAL.h"
 
 static uint8_t devAddr = MPU6050_DEFAULT_ADDRESS;
 static uint8_t buffer[14];

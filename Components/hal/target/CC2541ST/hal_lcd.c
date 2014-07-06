@@ -227,6 +227,9 @@ void HalLcdInit(void)
  * only line 1 is updated.
  *
  *************************************************************************************************/
+/* LCD Max Chars and Buffer */
+#define HAL_LCD_MAX_CHARS   16
+#define HAL_LCD_MAX_BUFF    25
 
 
 /**************************************************************************************************
@@ -345,7 +348,7 @@ void HalLcdWriteStringValue( char *title, uint16 value, uint8 format, uint8 line
   buf[tmpLen] = ' ';
   err = (uint32)(value);
   _ltoa( err, &buf[tmpLen+1], format );
-  HalLcdWriteString( (char*)buf, line );		
+  HalLcdWriteString( (char*)buf, line );
 #endif
 }
 
@@ -378,7 +381,7 @@ void HalLcdWriteStringValueValue( char *title, uint16 value1, uint8 format1,
   err = (uint32)(value2);
   _ltoa( err, &buf[tmpLen], format2 );
 
-  HalLcdWriteString( (char *)buf, line );		
+  HalLcdWriteString( (char *)buf, line );
 
 #endif
 }
@@ -502,7 +505,7 @@ void HalLcd_HW_Init(void)
 	HalLcd_HW_WaitUs(15); // 15 us
 	HalLcd_HW_Control(0x28);	//0x1a,微调对比度的值，可设置范围0x00～0x3f
 	HalLcd_HW_WaitUs(15); // 15 us
-	
+
 	HalLcd_HW_Control(0xa2);	// 1/9偏压比（bias）
 	HalLcd_HW_WaitUs(15); // 15 us
 	HalLcd_HW_Control(0xa0);	//行扫描顺序：从上到下
@@ -513,9 +516,9 @@ void HalLcd_HW_Init(void)
 	HalLcd_HW_WaitUs(15); // 15 us
 	HalLcd_HW_Control(0xaf);	//打开显示
 	HalLcd_HW_WaitUs(15); // 15 us
-    HalLcd_HW_Control(0xa4);	
+    HalLcd_HW_Control(0xa4);
 	HalLcd_HW_WaitUs(15); // 15 us
-        
+
 	HalLcd_HW_Clear();
         //display_string_5x7(1,1,"abcdefghijklmnopqrstuvwxyz");
         //display_string_5x7(8,1,"uvwxyz0123456789");
