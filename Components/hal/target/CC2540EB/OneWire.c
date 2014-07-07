@@ -100,11 +100,14 @@ sample code bearing this copyright.
 //#include <ioCC2540.h>
 #include <hal_mcu.h>
 
+//#define HAL_ENABLE_INTERRUPTS()
+//#define HAL_DISABLE_INTERRUPTS()
+
 /**************************************************
   接口定义，移植此程序只需修改下列宏定义和延时函数
 **************************************************/
-#define DQ            P0_0             //DS18B20数据IO口
-#define DQ_PIN        0                //DS18B20数据IO口
+#define DQ            P0_5             //DS18B20数据IO口
+#define DQ_PIN        5                //DS18B20数据IO口
 #define DQ_PORT       P0DIR
 
 /**************************************************
@@ -585,6 +588,17 @@ uint16_t OneWire_crc16(uint8_t* input, uint16_t len)
 
 #endif
 
+// Let's write by myself ba.
+void DS18B20_select( uint8_t rom[8])
+{
+    int i;
+
+    DS18B20_Write(MATCH_ROM, 1);           // Choose ROM
+
+    for( i = 0; i < 8; i++) {
+        DS18B20_Write(rom[i], 1);
+    }
+}
 /*
  *    写命令函数
  *    输入参数：  命令（DS18B20.H中定义）
@@ -592,15 +606,15 @@ uint16_t OneWire_crc16(uint8_t* input, uint16_t len)
  *    返回参数：  无
  *
  */
-void DS18B20_Write(unsigned char cmd)
+void DS18B20_Write(unsigned char cmd, uint8 power)
 {
     unsigned char i;
     SET_OUT();                  //设置IO为输出，2530->DS18B20
-    
+
     /*每次一位，循环8次*/
     for(i=0; i<8; i++)
     {
-        CL_DQ();              //IO为低    
+        CL_DQ();              //IO为低
         if( cmd & (1<<i) )    //写数据从低位开始
         {
           SET_DQ();           //IO输入高电平
@@ -609,10 +623,15 @@ void DS18B20_Write(unsigned char cmd)
         {
           CL_DQ();            //IO输出低电平
         }
-        delay_nus(40);        //保持15~60us
+        delay_nus(60);        //保持15~60us
         SET_DQ();             //IO口拉高
     }
     SET_DQ();                 //IO口拉高
+
+    if ( !power) {
+	    SET_IN();
+	    CL_DQ();
+    }
 }
 
 
@@ -627,9 +646,9 @@ unsigned char DS18B20_Read(void)
 {
     unsigned char rdData;     //读出的数据
     unsigned char i, dat;     //临时变量
-    
-    rdData = 0;               //读出的数据初始化为0     
-    
+
+    rdData = 0;               //读出的数据初始化为0
+
     /* 每次读一位，读8次 */
     for(i=0; i<8; i++)
     {
@@ -637,7 +656,7 @@ unsigned char DS18B20_Read(void)
         SET_DQ();           //IO拉高
         SET_IN();           //设置IO方向为输入 DS18B20->CC2540
         dat = DQ;           //读数据,从低位开始
-        
+
         if(dat)
         {
           rdData |= (1<<i); //如果读出的数据位为正
@@ -646,7 +665,7 @@ unsigned char DS18B20_Read(void)
         {
           rdData &= ~(1<<i);//如果读出的数据位为负
         }
-        
+
         delay_nus(70);      //保持60~120us
         SET_OUT();          //设置IO方向为输出 CC2540->DS18B20
 
@@ -670,11 +689,11 @@ void DS18B20_Init(void)
     SET_DQ();         //释放
     SET_IN();         //IO方向为输入 DS18B20->CC2540
     delay_nus(40);    //释放总线后等待15-60us
-    
+
     /* 等待DQ变低 */
     while(DQ)
     {
-        ; 
+        ;
     }
     delay_nus(240);   //检测到DQ 变低后，延时60-240us
     SET_OUT();        //设置IO方向为输出 CC2540->DS18B20
@@ -690,8 +709,8 @@ void DS18B20_Init(void)
 void DS18B20_SendConvert(void)
 {
     DS18B20_Init();               //复位18B20
-    DS18B20_Write(SKIP_ROM);      //发出跳过ROM匹配操作
-    DS18B20_Write(CONVERT_T);     //启动温度转换
+    DS18B20_Write(SKIP_ROM, 1);      //发出跳过ROM匹配操作
+    DS18B20_Write(CONVERT_T, 1);     //启动温度转换
 }
 float DS18B20_ReadMain(uint8 *data, uint8 len)
 {
@@ -699,17 +718,17 @@ float DS18B20_ReadMain(uint8 *data, uint8 len)
     unsigned char a,b;            //临时变量
     unsigned char flag;           //温度正负标记，正为0，负为1
     float ft;
-    
-    DS18B20_Init();               //DS18B20复位       
-    DS18B20_Write(SKIP_ROM);      //跳过ROM匹配
-    
-    DS18B20_Write(RD_SCRATCHPAD); //写入读9字节命令
+
+    DS18B20_Init();               //DS18B20复位
+    DS18B20_Write(SKIP_ROM, 1);      //跳过ROM匹配
+
+    DS18B20_Write(RD_SCRATCHPAD, 1); //写入读9字节命令
     tem_l = DS18B20_Read();       //读温度低位。第一字节
     tem_h = DS18B20_Read();       //读温度高位，第二字节
-    data[1] = tem_l;
-    data[0] = tem_h;
+    //data[1] = tem_l;
+    //data[0] = tem_h;
 
-    /* 判断RAM中存储的温度正负 
+    /* 判断RAM中存储的温度正负
        并提取出符号位和真实的数据
     */
     if(tem_h & 0x80)
@@ -721,14 +740,14 @@ float DS18B20_ReadMain(uint8 *data, uint8 len)
           负数的补码是在其原码的基础上, 符号位不变, 其余各位取反, 最后+1
         */
         tem_h = ~(a|b) + 1;       //取整数部分数值，不符号位
-        
+
         tem_l = ~(a&0x0f) + 1;    //取小数部分原值，不含符号位
     }
     else
     {
         flag = 0;                 //为正
         a = tem_h<<4;
-        a += (tem_l&0xf0)>>4;     //得到整数部分值 
+        a += (tem_l&0xf0)>>4;     //得到整数部分值
         b = tem_l&0x0f;           //得出小数部分值
         tem_h = a;                //整数部分
         tem_l = b&0xff;           //小数部分
@@ -740,6 +759,8 @@ float DS18B20_ReadMain(uint8 *data, uint8 len)
     sensor_data_value[1] = tem_h| (flag<<7);      //整数部分，包括符号位
 
     ft = sensor_data_value[1] + ((float)sensor_data_value[0])/10.0;
+    data[0] = sensor_data_value[0];
+    data[1] = sensor_data_value[1];
         //开始转换
     DS18B20_SendConvert();
 
