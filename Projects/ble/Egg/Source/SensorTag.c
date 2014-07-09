@@ -123,7 +123,7 @@
 #define MAG_DEFAULT_PERIOD                    2000
 #define ACC_DEFAULT_PERIOD                    1000
 #define GYRO_DEFAULT_PERIOD                   1000
-#define MPU6050_DEFAULT_PERIOD                200
+#define MPU6050_DEFAULT_PERIOD                1001
 #define DS18B20_DEFAULT_PERIOD                3000
 
 // Constants for two-stage reading
@@ -326,7 +326,8 @@ static void resetSensorSetup( void );
 static void sensorTag_HandleKeys( uint8 shift, uint8 keys );
 static void resetCharacteristicValue( uint16 servID, uint8 paramID, uint8 value, uint8 paramLen );
 static void resetCharacteristicValues( void );
-
+static void mpu6050StarWhenConnected(void);
+static void eggSerialAppSendNoti(uint8 *pBuffer,uint16 length);
 /*********************************************************************
  * PROFILE CALLBACKS
  */
@@ -1096,6 +1097,7 @@ static void peripheralStateNotificationCB( gaprole_States_t newState )
 
     case GAPROLE_CONNECTED:
       HalLedSet(HAL_LED_1, HAL_LED_MODE_OFF );
+      mpu6050StarWhenConnected();
       break;
 
     case GAPROLE_WAITING:
@@ -1155,6 +1157,7 @@ static void readMPU6050DataAdv( void )
     buffers[11] = *p;
     //GAPRole_SetParameter( GAPROLE_ADVERT_DATA, sizeof( advertData ), advertData );
     Mpu6050_SetParameter(SENSOR_DATA, MPU6050_DATA_LEN, buffers);
+    eggSerialAppSendNoti(buffers, MPU6050_DATA_LEN);
 }
 
 static void readDs18b20Data( void )
@@ -1478,6 +1481,18 @@ static void accelChangeCB( uint8 paramID )
       // Should not get here
       break;
   }
+}
+
+static void mpu6050StarWhenConnected(void) 
+{
+    if (mpu6050Config == ST_CFG_SENSOR_DISABLE)
+    {
+      // Start scheduling only on change disabled -> enabled
+      osal_set_event( sensorTag_TaskID, ST_MPU6050_SENSOR_EVT);
+    }
+    // Scheduled already, so just change range
+    mpu6050Config = ST_CFG_SENSOR_ENABLE;
+    HalMPU6050initialize();
 }
 
 static void mpu6050ChangeCB( uint8 paramID )
@@ -1926,4 +1941,21 @@ static void resetCharacteristicValues( void )
 
 /*********************************************************************
 *********************************************************************/
+static void eggSerialAppSendNoti(uint8 *pBuffer,uint16 length)
+{
+  uint8 len;
+  if (length > 20)
+  {
+    len = 20;
+  }
+  else
+  {
+    len = length;
+  }
+  static attHandleValueNoti_t pReport;
+  pReport.handle=0x2E;
+  pReport.len = len;
+  osal_memcpy(pReport.value, pBuffer, len);
+  GATT_Notification( 0, &pReport, FALSE );
+}
 

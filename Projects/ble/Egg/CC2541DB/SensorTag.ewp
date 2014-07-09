@@ -275,6 +275,7 @@
           <state>HAL_LED=FALSE</state>
           <state>HAL_I2C=TRUE</state>
           <state>HAL_ADC=FALSE</state>
+          <state>HAL_UART=FALSE</state>
         </option>
         <option>
           <name>CCPreprocFile</name>
@@ -3232,7 +3233,7 @@
       <name>$PROJ_DIR$\..\Source\SensorTag.c</name>
     </file>
     <file>
-      <name>$PROJ_DIR$\..\Source\SensorTag.h</name>
+      <name>$PROJ_DIR$\..\Source\sensorTag.h</name>
     </file>
     <file>
       <name>$PROJ_DIR$\..\Source\SensorTag_Main.c</name>
