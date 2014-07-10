@@ -118,12 +118,12 @@
 
 // How often to perform sensor reads (milliseconds)
 #define TEMP_DEFAULT_PERIOD                   1000
-#define HUM_DEFAULT_PERIOD                    1000
+#define HUM_DEFAULT_PERIOD                    6000
 #define BAR_DEFAULT_PERIOD                    1000
 #define MAG_DEFAULT_PERIOD                    2000
 #define ACC_DEFAULT_PERIOD                    1000
 #define GYRO_DEFAULT_PERIOD                   1000
-#define MPU6050_DEFAULT_PERIOD                1001
+#define MPU6050_DEFAULT_PERIOD                1000
 #define DS18B20_DEFAULT_PERIOD                3000
 
 // Constants for two-stage reading
@@ -310,6 +310,7 @@ static void readBarCalibration( void );
 static void readGyroData( void );
 static void readMPU6050DataAdv( void );
 static void readDs18b20Data( void );
+static void readDs18b20Data1( uint8* mData, uint8 flagrom);
 static void barometerChangeCB( uint8 paramID );
 static void irTempChangeCB( uint8 paramID );
 static void accelChangeCB( uint8 paramID );
@@ -327,6 +328,7 @@ static void sensorTag_HandleKeys( uint8 shift, uint8 keys );
 static void resetCharacteristicValue( uint16 servID, uint8 paramID, uint8 value, uint8 paramLen );
 static void resetCharacteristicValues( void );
 static void mpu6050StarWhenConnected(void);
+static void humidityStarWhenConnected(void);
 static void eggSerialAppSendNoti(uint8 *pBuffer,uint16 length);
 /*********************************************************************
  * PROFILE CALLBACKS
@@ -575,6 +577,7 @@ void SensorTag_Init( uint8 task_id )
  */
 uint16 SensorTag_ProcessEvent( uint8 task_id, uint16 events )
 {
+  static int flagRom = 0;
   VOID task_id; // OSAL required parameter that isn't used in this function
 
   if ( events & SYS_EVENT_MSG )
@@ -688,7 +691,12 @@ uint16 SensorTag_ProcessEvent( uint8 task_id, uint16 events )
   {
     if(ds18b20Enabled == TRUE)
     {
-        readDs18b20Data();
+        uint8 mData[4];
+        readDs18b20Data1(mData, flagRom++);
+        if (flagRom >= 7)
+        {
+            flagRom = 0;
+        }
         osal_start_timerEx( sensorTag_TaskID, ST_DS18B20_SENSOR_EVT, sensorDs18b20Period );
     }
     else
@@ -1098,6 +1106,7 @@ static void peripheralStateNotificationCB( gaprole_States_t newState )
     case GAPROLE_CONNECTED:
       HalLedSet(HAL_LED_1, HAL_LED_MODE_OFF );
       mpu6050StarWhenConnected();
+      humidityStarWhenConnected();
       break;
 
     case GAPROLE_WAITING:
@@ -1178,9 +1187,14 @@ static void readMPU6050DataAdv( void )
     buffers[9] = gy & 0xFF;
     buffers[10] = gz >> 8;
     buffers[11] = gz & 0xFF;
-    
+
+    uint8 sendbuffer[MPU6050_DATA_LEN+3];
+    sendbuffer[0] = 0xAA;
+    sendbuffer[1] = 0xBB;
+    sendbuffer[2] = 0xDD;
+    VOID osal_memcpy( sendbuffer+3, buffers, MPU6050_DATA_LEN );
     Mpu6050_SetParameter(SENSOR_DATA, MPU6050_DATA_LEN, buffers);
-    eggSerialAppSendNoti(buffers, MPU6050_DATA_LEN);
+    eggSerialAppSendNoti(sendbuffer, MPU6050_DATA_LEN+3);
 }
 #endif
 
@@ -1222,6 +1236,97 @@ static void readDs18b20Data( void )
   Ds18b20_SetParameter(SENSOR_DATA, DS18B20_DATA_LEN, mData);
 }
 
+static void readDs18b20Data1( uint8* mData, uint8 flagrom)
+{
+    uint8 rom[8] = {0x28, 0x5C, 0x1F, 0x92, 0x04, 0x00, 0x00, 0x26};
+    uint8 rom1[8] = {0x28, 0x12, 0x91, 0xA1, 0x05, 0x00, 0x00, 0x42};
+    uint8 rom2[8] = {0x28, 0xDA, 0xA1, 0xA1, 0x05, 0x00, 0x00, 0xF8};
+    uint8 rom3[8] = {0x28, 0x35, 0xAC, 0x31, 0x03, 0x00, 0x00, 0x29};
+    uint8 rom4[8] = {0x28, 0xBD, 0xA4, 0xA1, 0x05, 0x00, 0x00, 0x6C};
+    uint8 rom5[8] = {0x28, 0xEB, 0x8E, 0xA1, 0x05, 0x00, 0x00, 0xB5};
+    uint8 rom6[8] = {0x28, 0x37, 0xEC, 0x31, 0x03, 0x00, 0x00, 0xAE};
+    uint8 *pRom = rom;
+    switch (flagrom) {
+        case 0:
+            pRom = rom;
+            break;
+        case 1:
+            pRom = rom1;
+            break;
+        case 2:
+            pRom = rom2;
+            break;
+        case 3:
+            pRom = rom3;
+            break;
+        case 4:
+            pRom = rom4;
+            break;
+        case 5:
+            pRom = rom5;
+            break;
+        case 6:
+            pRom = rom6;
+            break;
+        default:
+            pRom = rom;
+            break;
+    }
+    DS18B20_Init();
+    DS18B20_select(pRom);
+    DS18B20_Write(0xBE, 0);
+    mData[0] = DS18B20_Read();
+    mData[1] = DS18B20_Read();
+    //mData[2] = DS18B20_Read();
+    //mData[3] = DS18B20_Read();
+    //mData[4] = DS18B20_Read();
+    unsigned char tem_h,tem_l, a, b, flag;
+    tem_l = mData[0];
+    tem_h = mData[1];
+    uint8 sendbuffer[6];
+    sendbuffer[0] = 0xAA;
+    sendbuffer[1] = 0xBB;
+    sendbuffer[2] = 0xEE;
+    sendbuffer[3] = flag;
+    sendbuffer[4] = tem_l;
+    sendbuffer[5] = tem_h;
+    eggSerialAppSendNoti(sendbuffer, 6);
+#if 0
+    if(tem_h & 0x80)
+    {
+        flag = 1;                 //温度为负
+        a = (tem_l>>4);           //取温度低4位原码
+        b = (tem_h<<4)& 0xf0;     //取温度高4位原码
+        /*补码-原码转换
+          负数的补码是在其原码的基础上, 符号位不变, 其余各位取反, 最后+1
+        */
+        tem_h = ~(a|b) + 1;       //取整数部分数值，不符号位
+
+        tem_l = ~(a&0x0f) + 1;    //取小数部分原值，不含符号位
+    }
+    else
+    {
+        flag = 0;                 //为正
+        a = tem_h<<4;
+        a += (tem_l&0xf0)>>4;     //得到整数部分值
+        b = tem_l&0x0f;           //得出小数部分值
+        tem_h = a;                //整数部分
+        tem_l = b&0xff;           //小数部分
+    }
+
+    uint8 sensor_data_value[2];
+    unsigned char FRACTION_INDEX[16] = {0, 1, 1, 2, 2, 3, 4, 4, 5, 6, 6, 7, 7, 8, 9, 9 };//小数值查询表
+    sensor_data_value[0] = FRACTION_INDEX[tem_l]; //查表得小数值
+    sensor_data_value[1] = tem_h| (flag<<7);      //整数部分，包括符号位
+
+    float ft = sensor_data_value[1] + ((float)sensor_data_value[0])/10.0;
+    mData[2] = sensor_data_value[1];
+    mData[3] = sensor_data_value[0];
+#endif
+    DS18B20_Init();             //复位18B20
+    DS18B20_Write(0xCC, 1);     //发出跳过ROM匹配操作
+    DS18B20_Write(0x44, 1);     //启动温度转换
+}
 /*********************************************************************
  * @fn      readMagData
  *
@@ -1257,6 +1362,14 @@ static void readHumData(void)
   if (HalHumiReadMeasurement(hData))
   {
     Humidity_SetParameter( SENSOR_DATA, HUMIDITY_DATA_LEN, hData);
+
+    uint8 buffers[5];
+    buffers[0] = 0xAA;
+    buffers[1] = 0xBB;
+    buffers[2] = 0xCC;
+    buffers[3] = hData[2];
+    buffers[4] = hData[3];
+    eggSerialAppSendNoti(buffers, 5);
   }
 }
 
@@ -1507,16 +1620,16 @@ static void accelChangeCB( uint8 paramID )
   }
 }
 
-static void mpu6050StarWhenConnected(void) 
+static void mpu6050StarWhenConnected(void)
 {
     if (mpu6050Config == ST_CFG_SENSOR_DISABLE)
     {
       // Start scheduling only on change disabled -> enabled
       osal_set_event( sensorTag_TaskID, ST_MPU6050_SENSOR_EVT);
+      // Scheduled already, so just change range
+      mpu6050Config = ST_CFG_SENSOR_ENABLE;
+      HalMPU6050initialize();
     }
-    // Scheduled already, so just change range
-    mpu6050Config = ST_CFG_SENSOR_ENABLE;
-    HalMPU6050initialize();
 }
 
 static void mpu6050ChangeCB( uint8 paramID )
@@ -1582,7 +1695,7 @@ static void ds18b20ChangeCB( uint8 paramID )
           ds18b20Enabled = TRUE;
           osal_set_event( sensorTag_TaskID, ST_DS18B20_SENSOR_EVT);
           //LCD_WRITE_STRING( "Let start DS18B20...", HAL_LCD_LINE_1 );
-          OneWire_reset_search();
+          //OneWire_reset_search();
         }
       }
       break;
@@ -1644,6 +1757,15 @@ static void magnetometerChangeCB( uint8 paramID )
   }
 }
 
+static void humidityStarWhenConnected(void)
+{
+  if (!humiEnabled)
+  {
+    humiEnabled = TRUE;
+    humiState = 0;
+    osal_set_event( sensorTag_TaskID, ST_HUMIDITY_SENSOR_EVT);
+  }
+}
 /*********************************************************************
  * @fn      humidityChangeCB
  *

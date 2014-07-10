@@ -103,8 +103,8 @@ sample code bearing this copyright.
 /**************************************************
   接口定义，移植此程序只需修改下列宏定义和延时函数
 **************************************************/
-#define DQ            P0_0             //DS18B20数据IO口
-#define DQ_PIN        0                //DS18B20数据IO口
+#define DQ            P0_5             //DS18B20数据IO口
+#define DQ_PIN        5                //DS18B20数据IO口
 #define DQ_PORT       P0DIR
 
 /**************************************************
@@ -585,6 +585,17 @@ uint16_t OneWire_crc16(uint8_t* input, uint16_t len)
 
 #endif
 
+// Let's write by myself ba.
+void DS18B20_select( uint8_t rom[8])
+{
+    int i;
+
+    DS18B20_Write(MATCH_ROM, 1);           // Choose ROM
+
+    for( i = 0; i < 8; i++) {
+        DS18B20_Write(rom[i], 1);
+    }
+}
 /*
  *    写命令函数
  *    输入参数：  命令（DS18B20.H中定义）
@@ -592,7 +603,7 @@ uint16_t OneWire_crc16(uint8_t* input, uint16_t len)
  *    返回参数：  无
  *
  */
-void DS18B20_Write(unsigned char cmd)
+void DS18B20_Write(unsigned char cmd, uint8 power)
 {
     unsigned char i;
     SET_OUT();                  //设置IO为输出，2530->DS18B20
@@ -609,10 +620,14 @@ void DS18B20_Write(unsigned char cmd)
         {
           CL_DQ();            //IO输出低电平
         }
-        delay_nus(40);        //保持15~60us
+        delay_nus(60);        //保持15~60us
         SET_DQ();             //IO口拉高
     }
     SET_DQ();                 //IO口拉高
+    if ( !power) {
+	    SET_IN();
+	    CL_DQ();
+    }
 }
 
 
@@ -690,8 +705,8 @@ void DS18B20_Init(void)
 void DS18B20_SendConvert(void)
 {
     DS18B20_Init();               //复位18B20
-    DS18B20_Write(SKIP_ROM);      //发出跳过ROM匹配操作
-    DS18B20_Write(CONVERT_T);     //启动温度转换
+    DS18B20_Write(SKIP_ROM, 1);      //发出跳过ROM匹配操作
+    DS18B20_Write(CONVERT_T, 1);     //启动温度转换
 }
 float DS18B20_ReadMain(uint8 *data, uint8 len)
 {
@@ -701,13 +716,13 @@ float DS18B20_ReadMain(uint8 *data, uint8 len)
     float ft;
     
     DS18B20_Init();               //DS18B20复位       
-    DS18B20_Write(SKIP_ROM);      //跳过ROM匹配
+    DS18B20_Write(SKIP_ROM, 1);      //跳过ROM匹配
     
-    DS18B20_Write(RD_SCRATCHPAD); //写入读9字节命令
+    DS18B20_Write(RD_SCRATCHPAD, 1); //写入读9字节命令
     tem_l = DS18B20_Read();       //读温度低位。第一字节
     tem_h = DS18B20_Read();       //读温度高位，第二字节
-    data[1] = tem_l;
-    data[0] = tem_h;
+    //data[1] = tem_l;
+    //data[0] = tem_h;
 
     /* 判断RAM中存储的温度正负 
        并提取出符号位和真实的数据
@@ -740,6 +755,8 @@ float DS18B20_ReadMain(uint8 *data, uint8 len)
     sensor_data_value[1] = tem_h| (flag<<7);      //整数部分，包括符号位
 
     ft = sensor_data_value[1] + ((float)sensor_data_value[0])/10.0;
+    data[0] = sensor_data_value[0];
+    data[1] = sensor_data_value[1];
         //开始转换
     DS18B20_SendConvert();
 

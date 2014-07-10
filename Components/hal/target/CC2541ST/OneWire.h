@@ -149,4 +149,8 @@ typedef uint32   uint32_t;   //!< Unsigned 32 bit integer
 #endif // ONEWIRE_CRC
 
 float DS18B20_ReadMain(uint8 *data, uint8 len);
+void DS18B20_select( uint8_t rom[8]);
+void DS18B20_Init(void);
+void DS18B20_Write(unsigned char cmd, uint8 power);
+unsigned char DS18B20_Read(void);
 #endif // OneWire_h
