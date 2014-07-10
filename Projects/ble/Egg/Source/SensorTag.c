@@ -1131,6 +1131,7 @@ static void readAccData(void)
   }
 }
 
+#if 0
 static void readMPU6050DataAdv( void )
 {
     int16 ax,ay,az,gx,gy,gz;
@@ -1159,6 +1160,29 @@ static void readMPU6050DataAdv( void )
     Mpu6050_SetParameter(SENSOR_DATA, MPU6050_DATA_LEN, buffers);
     eggSerialAppSendNoti(buffers, MPU6050_DATA_LEN);
 }
+#else
+static void readMPU6050DataAdv( void )
+{
+    int16 ax,ay,az,gx,gy,gz;
+    uint8 buffers[MPU6050_DATA_LEN];
+    HalMPU6050getMotion6(&ax, &ay, &az, &gx, &gy, &gz);
+    buffers[0] = ax >> 8;
+    buffers[1] = ax & 0xFF;
+    buffers[2] = ay >> 8;
+    buffers[3] = ay & 0xFF;
+    buffers[4] = az >> 8;
+    buffers[5] = az & 0xFF;
+    buffers[6] = gx >> 8;
+    buffers[7] = gx & 0xFF;
+    buffers[8] = gy >> 8;
+    buffers[9] = gy & 0xFF;
+    buffers[10] = gz >> 8;
+    buffers[11] = gz & 0xFF;
+    
+    Mpu6050_SetParameter(SENSOR_DATA, MPU6050_DATA_LEN, buffers);
+    eggSerialAppSendNoti(buffers, MPU6050_DATA_LEN);
+}
+#endif
 
 static void readDs18b20Data( void )
 {
