@@ -27,7 +27,7 @@ List of protocols
           <crlf> ::= <CR><LF>
             <CR> ::= 0x0D
             <LF> ::= 0x0A
-       <package> ::= <package start><axis><field end><temp1><field end>...,<temp13><field end><humidity><field end><package end>
+       <package> ::= <package start><axis data><field end><tempture data><field end><humidity data><field end><package end>
  <package start> ::= 0x55,0xaa,0xcc
    <package end> ::= 0xaa,0x55
      <field end> ::= 0x00
@@ -36,6 +36,7 @@ List of protocols
         <y-axis> ::= <axis-data>
         <z-axis> ::= <axis-data>
      <axis-data> ::= <16bit binary, higher bit first>
+ <tempture data> ::= <temp(1)><field end>...,<temp(13)><field end>
           <temp> ::= <16bit binary, higher bit first>
       <humidity> ::= <16bit binary, higher bit first>
 ```
