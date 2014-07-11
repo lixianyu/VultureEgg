@@ -23,7 +23,7 @@ List of protocols
 ### frame format
 
 ```text
-    <data frame> ::= <package><crlf>
+    <data frame> ::= <package><crlf><package><crlf><package><crlf>...
           <crlf> ::= <CR><LF>
             <CR> ::= 0x0D
             <LF> ::= 0x0A
@@ -35,10 +35,10 @@ List of protocols
         <x-axis> ::= <axis-data>
         <y-axis> ::= <axis-data>
         <z-axis> ::= <axis-data>
-     <axis-data> ::= <16bit binary, higher bit first>
+     <axis-data> ::= <hight byte><low byte>
  <tempture data> ::= <temp(1)><field end>...,<temp(13)><field end>
-          <temp> ::= <16bit binary, higher bit first>
-      <humidity> ::= <16bit binary, higher bit first>
+          <temp> ::= <hight byte><low byte>
+      <humidity> ::= <hight byte><low byte>
 ```
 
 ### `EGG` to `BRIDGE`
