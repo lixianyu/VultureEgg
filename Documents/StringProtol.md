@@ -10,7 +10,7 @@
   <unix时间戳> ::= <UNIX timestamp,decimal,UTC+8>
   <加速度数据> ::= <x-axis-a>,<y-axis-a>,<z-axis-a>
             <x-axis-a>,<y-axis-a>,<z-axis-a> = <axis-a>
-              <axis> ::= <float,单位g>
+            <axis-a> ::= <float,单位g>
   <陀螺仪数据> ::= <x-axis-z>,<y-axis-z>,<z-axis-z>
             <x-axis-z>,<y-axis-z>,<z-axis-z> = <axis-z>
             <axis-z> ::= <float,单位自定>
