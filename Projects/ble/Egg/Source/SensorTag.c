@@ -124,7 +124,7 @@
 #define ACC_DEFAULT_PERIOD                    1000
 #define GYRO_DEFAULT_PERIOD                   1000
 #define MPU6050_DEFAULT_PERIOD                1000
-#define DS18B20_DEFAULT_PERIOD                3000
+#define DS18B20_DEFAULT_PERIOD                8000
 
 // Constants for two-stage reading
 #define TEMP_MEAS_DELAY                       275   // Conversion time 250 ms
@@ -132,6 +132,7 @@
 #define ACC_FSM_PERIOD                        20
 #define HUM_FSM_PERIOD                        20
 #define GYRO_STARTUP_TIME                     60    // Start-up time max. 50 ms
+#define DS18B20_FSM_PERIOD                    900
 
 // What is the advertising interval when device is discoverable (units of 625us, 160=100ms)
 #define DEFAULT_ADVERTISING_INTERVAL          1600
@@ -278,6 +279,7 @@ static bool   gyroEnabled = FALSE;
 
 static bool   barBusy = FALSE;
 static uint8  humiState = 0;
+static uint8  ds18b20State = 0;
 
 static bool   sysResetRequest = FALSE;
 
@@ -311,6 +313,7 @@ static void readGyroData( void );
 static void readMPU6050DataAdv( void );
 static void readDs18b20Data( void );
 static void readDs18b20Data1( uint8* mData, uint8 flagrom);
+static void readDs18b20WithState(uint8 state, uint8 flagrom);
 static void barometerChangeCB( uint8 paramID );
 static void irTempChangeCB( uint8 paramID );
 static void accelChangeCB( uint8 paramID );
@@ -329,6 +332,7 @@ static void resetCharacteristicValue( uint16 servID, uint8 paramID, uint8 value,
 static void resetCharacteristicValues( void );
 static void mpu6050StarWhenConnected(void);
 static void humidityStarWhenConnected(void);
+static void ds18b20StarWhenConnected(void);
 static void eggSerialAppSendNoti(uint8 *pBuffer,uint16 length);
 /*********************************************************************
  * PROFILE CALLBACKS
@@ -404,6 +408,74 @@ static gapRolesParamUpdateCB_t paramUpdateCB =
   gapRolesParamUpdateCB,
 };
 
+#define LED1 P1_0       //定义P1.0口为LED1控制端
+#define LED2 P1_1       //定义P1.1口为LED2控制端
+#define LED3 P1_4       //定义P1.4口为LED3控制端
+#define LED4 P0_1       //定义P0.1口为LED4控制端
+/****************************************************************************
+* 名    称: DelayMS()
+* 功    能: 以毫秒为单位延时，系统时钟不配置时默认为16M(用示波器测量相当精确)
+* 入口参数: msec 延时参数，值越大，延时越久
+* 出口参数: 无
+****************************************************************************/
+void DelayMS(uint32 msec)
+{
+    uint32 i,j;
+
+    for (i=0; i<msec; i++)
+        for (j=0; j<535; j++);
+}
+/****************************************************************************
+* 名    称: LedOnOrOff()
+* 功    能: 点亮或熄灭所有LED灯
+* 入口参数: mode为1时LED灯亮  mode为0时LED灯灭， 共阴极
+* 出口参数: 无
+****************************************************************************/
+void LedOnOrOff(uint8 mode)
+{
+    LED1 = mode;
+    LED2 = mode;
+    LED3 = mode;
+    LED4 = mode;
+}
+/****************************************************************************
+* 名    称: InitLed()
+* 功    能: 设置LED灯相应的IO口
+* 入口参数: 无
+* 出口参数: 无
+****************************************************************************/
+void InitLed(void)
+{
+    P1DIR |= 0x13;      //P1.0、P1.1、P1.4定义为输出
+    P0DIR |= 0x02;      //P0.1定义为输出
+    LedOnOrOff(0);      //使所有LED灯默认为熄灭状态
+}
+
+void initDS18B20(void) {
+    P0DIR |= 0x02;
+}
+
+void eggLeds(void) {
+    LED1 = !LED1;         //流水灯，初始化时LED为熄灭执行后则点亮
+    DelayMS(200);
+    LED2 = !LED2;
+    DelayMS(200);
+    LED3 = !LED3;
+    DelayMS(200);
+    LED4 = !LED4;
+    DelayMS(200);
+
+    for (uint8 i=0; i<2; i++)   //所有灯闪烁2次
+    {
+       LedOnOrOff(0);    //关闭所有LED灯
+       DelayMS(200);
+       LedOnOrOff(1);    //打开所有LED灯
+       DelayMS(200);
+    }
+
+    LedOnOrOff(0);       //使所有LED灯熄灭状态
+    DelayMS(500);
+}
 /*********************************************************************
  * PUBLIC FUNCTIONS
  */
@@ -538,21 +610,9 @@ void SensorTag_Init( uint8 task_id )
   VOID CcService_RegisterAppCBs( &sensorTag_ccCBs );
   VOID GAPRole_RegisterAppCBs( &paramUpdateCB );
 
-  P0SEL = 0; // Configure Port 0 as GPIO
-  P1SEL = 0; // Configure Port 1 as GPIO
-  P2SEL = 0; // Configure Port 2 as GPIO
-  /*P1SEL = 0x40; // Configure Port 1 as GPIO, except P1.6 for peripheral function for buzzer
-  P2SEL = 0; // Configure Port 2 as GPIO
-
-  P0DIR = 0xFC; // Port 0 pins P0.0 and P0.1 as input (buttons),
-                // all others (P0.2-P0.7) as output
-  P1DIR = 0xFF; // All port 1 pins (P1.0-P1.7) as output
-  P2DIR = 0x1F; // All port 1 pins (P2.0-P2.4) as output
-
-  P0 = 0x03; // All pins on port 0 to low except for P0.0 and P0.1 (buttons)
-  P1 = 0;   // All pins on port 1 to low
-  P2 = 0;   // All pins on port 2 to low
-  */
+  //InitLed();
+  initDS18B20();
+  
   // Enable clock divide on halt
   // This reduces active current while radio is active and CC254x MCU
   // is halted
@@ -614,8 +674,16 @@ uint16 SensorTag_ProcessEvent( uint8 task_id, uint16 events )
     // Start Bond Manager
     VOID GAPBondMgr_Register( &sensorTag_BondMgrCBs );
 
+    //osal_start_timerEx( sensorTag_TaskID, ST_LED_EVT, 500 );
     //osal_start_timerEx( sensorTag_TaskID, ST_MPU6050_SENSOR_EVT, sensorMpu6050Period );
     return ( events ^ ST_START_DEVICE_EVT );
+  }
+  if ( events & ST_LED_EVT )
+  {
+    eggLeds();
+
+    osal_start_timerEx( sensorTag_TaskID, ST_LED_EVT, 500 );
+    return ( events ^ ST_LED_EVT );
   }
 
   //////////////////////////
@@ -689,15 +757,33 @@ uint16 SensorTag_ProcessEvent( uint8 task_id, uint16 events )
   //////////////////////////
   if ( events & ST_DS18B20_SENSOR_EVT )
   {
-    if(ds18b20Enabled == TRUE)
+    if (ds18b20Enabled == TRUE)
     {
-        uint8 mData[4];
-        readDs18b20Data1(mData, flagRom++);
-        if (flagRom >= 7)
+        if (ds18b20State == 0)
         {
-            flagRom = 0;
+            readDs18b20WithState(0, flagRom);
         }
-        osal_start_timerEx( sensorTag_TaskID, ST_DS18B20_SENSOR_EVT, sensorDs18b20Period );
+        else {
+            readDs18b20WithState(1, flagRom++);
+        }
+
+        if (ds18b20State == 0)
+        {
+            osal_start_timerEx( sensorTag_TaskID, ST_DS18B20_SENSOR_EVT, 1000 );
+            ds18b20State = 1;
+        }
+        else
+        {
+            if (flagRom >= 7)
+            {
+                flagRom = 0;
+                osal_start_timerEx( sensorTag_TaskID, ST_DS18B20_SENSOR_EVT, sensorDs18b20Period );
+            }
+            else {
+                osal_start_timerEx( sensorTag_TaskID, ST_DS18B20_SENSOR_EVT, 1 );
+            }
+            ds18b20State = 0;
+        }
     }
     else
     {
@@ -1107,6 +1193,7 @@ static void peripheralStateNotificationCB( gaprole_States_t newState )
       HalLedSet(HAL_LED_1, HAL_LED_MODE_OFF );
       mpu6050StarWhenConnected();
       humidityStarWhenConnected();
+      ds18b20StarWhenConnected();
       break;
 
     case GAPROLE_WAITING:
@@ -1327,6 +1414,82 @@ static void readDs18b20Data1( uint8* mData, uint8 flagrom)
     DS18B20_Write(0xCC, 1);     //发出跳过ROM匹配操作
     DS18B20_Write(0x44, 1);     //启动温度转换
 }
+
+void readDs18b20WithState(uint8 state, uint8 flagrom)
+{
+    uint8 rom[8] = {0x28, 0x5C, 0x1F, 0x92, 0x04, 0x00, 0x00, 0x26};
+    uint8 rom1[8] = {0x28, 0x12, 0x91, 0xA1, 0x05, 0x00, 0x00, 0x42};
+    uint8 rom2[8] = {0x28, 0xDA, 0xA1, 0xA1, 0x05, 0x00, 0x00, 0xF8};
+    uint8 rom3[8] = {0x28, 0x35, 0xAC, 0x31, 0x03, 0x00, 0x00, 0x29};
+    uint8 rom4[8] = {0x28, 0xBD, 0xA4, 0xA1, 0x05, 0x00, 0x00, 0x6C};
+    uint8 rom5[8] = {0x28, 0xEB, 0x8E, 0xA1, 0x05, 0x00, 0x00, 0xB5};
+    uint8 rom6[8] = {0x28, 0x37, 0xEC, 0x31, 0x03, 0x00, 0x00, 0xAE};
+    uint8 *pRom = rom;
+    switch (flagrom) {
+        case 0:
+            pRom = rom;
+            break;
+        case 1:
+            pRom = rom1;
+            break;
+        case 2:
+            pRom = rom2;
+            break;
+        case 3:
+            pRom = rom3;
+            break;
+        case 4:
+            pRom = rom4;
+            break;
+        case 5:
+            pRom = rom5;
+            break;
+        case 6:
+            pRom = rom6;
+            break;
+        default:
+            pRom = rom;
+            break;
+    }
+    if (state == 0) {
+        #if 0
+        DS18B20_Init();
+        DS18B20_select(pRom);
+        DS18B20_Write(0x44, 1); //Start conversion, with parasite power on at the end.
+        #else
+        OneWire_reset();
+        OneWire_select(pRom);
+        OneWire_write(0x44, 1);
+        #endif
+    }
+    else {
+        #if 0
+        DS18B20_Init();
+        DS18B20_select(pRom);
+        DS18B20_Write(0xBE, 0); // Read scratchpad.
+        uint8 tem_h,tem_l;
+        tem_l = DS18B20_Read();
+        tem_h = DS18B20_Read();
+        #else
+        OneWire_reset();
+        DS18B20_select(pRom);
+        OneWire_write(0xBE, 0);
+        uint8 tem_h,tem_l;
+        tem_l = OneWire_read();
+        tem_h = OneWire_read();
+        #endif
+        uint8 sendbuffer[6];
+        sendbuffer[0] = 0xAA;
+        sendbuffer[1] = 0xBB;
+        sendbuffer[2] = 0xEE;
+        sendbuffer[3] = flagrom;
+        sendbuffer[4] = tem_l;
+        sendbuffer[5] = tem_h;
+        eggSerialAppSendNoti(sendbuffer, 6);
+        Ds18b20_SetParameter(SENSOR_DATA, DS18B20_DATA_LEN, sendbuffer+4);
+    }
+}
+
 /*********************************************************************
  * @fn      readMagData
  *
@@ -1670,6 +1833,18 @@ static void mpu6050ChangeCB( uint8 paramID )
       // Should not get here
       break;
   }
+}
+
+static void ds18b20StarWhenConnected(void)
+{
+    
+    if (!ds18b20Enabled)
+    {
+        ds18b20State = 0;
+        ds18b20Enabled = TRUE;
+        osal_set_event( sensorTag_TaskID, ST_DS18B20_SENSOR_EVT);
+    }
+    
 }
 
 static void ds18b20ChangeCB( uint8 paramID )

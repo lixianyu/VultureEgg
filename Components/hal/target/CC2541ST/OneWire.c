@@ -103,8 +103,8 @@ sample code bearing this copyright.
 /**************************************************
   接口定义，移植此程序只需修改下列宏定义和延时函数
 **************************************************/
-#define DQ            P0_5             //DS18B20数据IO口
-#define DQ_PIN        5                //DS18B20数据IO口
+#define DQ            P0_1             //DS18B20数据IO口
+#define DQ_PIN        1                //DS18B20数据IO口
 #define DQ_PORT       P0DIR
 
 /**************************************************
@@ -127,10 +127,13 @@ sample code bearing this copyright.
 #define HIGH            1                 //高电平
 #define LOW             0                 //低电平
 
-#define CL_DQ()     DQ = LOW              //清除数据
-#define SET_DQ()    DQ = HIGH             //设置数据
-#define SET_OUT()   DQ_PORT |=  BV(DQ_PIN);  //设置IO方向,out设置IO方向为输出
-#define SET_IN()    DQ_PORT &= ~(BV(DQ_PIN));  //设置IO方向,in设备IO方向为输入
+#define CL_DQ()     (DQ = LOW)              //清除数据
+#define SET_DQ()    (DQ = HIGH)             //设置数据
+
+#define SET_OUT()    (DQ_PORT |= 0x02);
+#define SET_IN()     (DQ_PORT &= 0xFD);
+//#define SET_OUT()   DQ_PORT |=  BV(DQ_PIN);  //设置IO方向,out设置IO方向为输出
+//#define SET_IN()    DQ_PORT &= ~(BV(DQ_PIN));  //设置IO方向,in设备IO方向为输入
 
 //#define SET_OUT()   DQ_PORT |=  1;  //设置IO方向,out设置IO方向为输出
 //#define SET_IN()    DQ_PORT &= ~(1);  //设置IO方向,in设备IO方向为输入
