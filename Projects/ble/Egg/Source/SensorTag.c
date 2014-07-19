@@ -774,7 +774,7 @@ uint16 SensorTag_ProcessEvent( uint8 task_id, uint16 events )
         }
         else
         {
-            if (flagRom >= 7)
+            if (flagRom >= 14)
             {
                 flagRom = 0;
                 osal_start_timerEx( sensorTag_TaskID, ST_DS18B20_SENSOR_EVT, sensorDs18b20Period );
@@ -1275,13 +1275,15 @@ static void readMPU6050DataAdv( void )
     buffers[10] = gz >> 8;
     buffers[11] = gz & 0xFF;
 
-    uint8 sendbuffer[MPU6050_DATA_LEN+3];
+    uint8 sendbuffer[MPU6050_DATA_LEN+5];
     sendbuffer[0] = 0xAA;
     sendbuffer[1] = 0xBB;
-    sendbuffer[2] = 0xDD;
+    sendbuffer[2] = 0xAA;
     VOID osal_memcpy( sendbuffer+3, buffers, MPU6050_DATA_LEN );
+    sendbuffer[15] = 0xFF;
+    sendbuffer[16] = 0xFF;
     Mpu6050_SetParameter(SENSOR_DATA, MPU6050_DATA_LEN, buffers);
-    eggSerialAppSendNoti(sendbuffer, MPU6050_DATA_LEN+3);
+    eggSerialAppSendNoti(sendbuffer, MPU6050_DATA_LEN+5);
 }
 #endif
 
@@ -1415,6 +1417,8 @@ static void readDs18b20Data1( uint8* mData, uint8 flagrom)
     DS18B20_Write(0x44, 1);     //Æô¶¯ÎÂ¶È×ª»»
 }
 
+static uint8 gsendbuffer[36];
+static uint8 gsendbufferI;
 void readDs18b20WithState(uint8 state, uint8 flagrom)
 {
     uint8 rom[8] = {0x28, 0x5C, 0x1F, 0x92, 0x04, 0x00, 0x00, 0x26};
@@ -1424,6 +1428,14 @@ void readDs18b20WithState(uint8 state, uint8 flagrom)
     uint8 rom4[8] = {0x28, 0xBD, 0xA4, 0xA1, 0x05, 0x00, 0x00, 0x6C};
     uint8 rom5[8] = {0x28, 0xEB, 0x8E, 0xA1, 0x05, 0x00, 0x00, 0xB5};
     uint8 rom6[8] = {0x28, 0x37, 0xEC, 0x31, 0x03, 0x00, 0x00, 0xAE};
+    
+    uint8 rom7[8] = {0x28, 0x5C, 0x1F, 0x92, 0x04, 0x00, 0x00, 0x26};
+    uint8 rom8[8] = {0x28, 0x12, 0x91, 0xA1, 0x05, 0x00, 0x00, 0x42};
+    uint8 rom9[8] = {0x28, 0x12, 0x91, 0xA1, 0x05, 0x00, 0x00, 0x42};
+    uint8 rom10[8] = {0x28, 0xDA, 0xA1, 0xA1, 0x05, 0x00, 0x00, 0xF8};
+    uint8 rom11[8] = {0x28, 0x35, 0xAC, 0x31, 0x03, 0x00, 0x00, 0x29};
+    uint8 rom12[8] = {0x28, 0xBD, 0xA4, 0xA1, 0x05, 0x00, 0x00, 0x6C};
+    uint8 rom13[8] = {0x28, 0xEB, 0x8E, 0xA1, 0x05, 0x00, 0x00, 0xB5};
     uint8 *pRom = rom;
     switch (flagrom) {
         case 0:
@@ -1446,6 +1458,28 @@ void readDs18b20WithState(uint8 state, uint8 flagrom)
             break;
         case 6:
             pRom = rom6;
+            break;
+
+        case 7:
+            pRom = rom7;
+            break;
+        case 8:
+            pRom = rom8;
+            break;
+        case 9:
+            pRom = rom9;
+            break;
+        case 10:
+            pRom = rom10;
+            break;
+        case 11:
+            pRom = rom11;
+            break;
+        case 12:
+            pRom = rom12;
+            break;
+        case 13:
+            pRom = rom13;
             break;
         default:
             pRom = rom;
@@ -1478,15 +1512,32 @@ void readDs18b20WithState(uint8 state, uint8 flagrom)
         tem_l = OneWire_read();
         tem_h = OneWire_read();
         #endif
-        uint8 sendbuffer[6];
-        sendbuffer[0] = 0xAA;
-        sendbuffer[1] = 0xBB;
-        sendbuffer[2] = 0xEE;
-        sendbuffer[3] = flagrom;
-        sendbuffer[4] = tem_l;
-        sendbuffer[5] = tem_h;
-        eggSerialAppSendNoti(sendbuffer, 6);
-        Ds18b20_SetParameter(SENSOR_DATA, DS18B20_DATA_LEN, sendbuffer+4);
+        if (flagrom == 0)
+        {
+            gsendbufferI = 0;
+            gsendbuffer[gsendbufferI++] = 0xAA; // 0
+            gsendbuffer[gsendbufferI++] = 0xBB;
+            gsendbuffer[gsendbufferI++] = 0xBB; // 2
+            gsendbuffer[gsendbufferI++] = tem_l;
+            gsendbuffer[gsendbufferI++] = tem_h; // 4
+        }
+        else
+        {
+            gsendbuffer[gsendbufferI++] = tem_l;
+            gsendbuffer[gsendbufferI++] = tem_h;
+        }
+        if (flagrom == 13)
+        {
+            gsendbuffer[gsendbufferI++] = 0xFF;
+            gsendbuffer[gsendbufferI++] = 0xFF;
+            eggSerialAppSendNoti(gsendbuffer, 17);
+            eggSerialAppSendNoti(gsendbuffer+17, 16);
+            Ds18b20_SetParameter(SENSOR_DATA, DS18B20_DATA_LEN, gsendbuffer+gsendbufferI-4);
+        }
+        else
+        {
+            Ds18b20_SetParameter(SENSOR_DATA, DS18B20_DATA_LEN, gsendbuffer+gsendbufferI-2);
+        }
     }
 }
 
@@ -1526,13 +1577,15 @@ static void readHumData(void)
   {
     Humidity_SetParameter( SENSOR_DATA, HUMIDITY_DATA_LEN, hData);
 
-    uint8 buffers[5];
+    uint8 buffers[7];
     buffers[0] = 0xAA;
     buffers[1] = 0xBB;
     buffers[2] = 0xCC;
     buffers[3] = hData[2];
     buffers[4] = hData[3];
-    eggSerialAppSendNoti(buffers, 5);
+    buffers[5] = 0xFF;
+    buffers[6] = 0xFF;
+    eggSerialAppSendNoti(buffers, 7);
   }
 }
 
