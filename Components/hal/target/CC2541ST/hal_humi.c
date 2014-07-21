@@ -157,7 +157,7 @@ bool HalHumiExecMeasurementStep(uint8 state)
         success = HalHumiReadData(buf+DATA_LEN, DATA_LEN);
       }
 
-      // Turn of DC-DC control
+      // Turn off DC-DC control
       HalDcDcControl(ST_HUMID,false);
       break;
   }

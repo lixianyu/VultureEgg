@@ -65,7 +65,7 @@ extern "C"
 
 #define ST_MPU6050_SENSOR_EVT                            0x0100
 #define ST_DS18B20_SENSOR_EVT                            0x0200
-#define ST_LED_EVT                            0x0400
+#define ST_DS18B20_CONTINUE_EVT                          0x0400
 /*********************************************************************
  * MACROS
  */

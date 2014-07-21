@@ -277,6 +277,17 @@ static bool   barEnabled = FALSE;
 static bool   humiEnabled = FALSE;
 static bool   gyroEnabled = FALSE;
 
+static uint8 gsendbuffer[36];
+static uint8 gsendbufferI;
+static int flagRom = 0;
+typedef enum
+{
+    EGG_STATE_MEASURE_IDLE,
+    EGG_STATE_MEASURE_HUMIDITY,
+    EGG_STATE_MEASURE_DS18B20,
+    EGG_STATE_MEASURE_MPU6050
+} t_enum_EggState;
+static t_enum_EggState gEggState = EGG_STATE_MEASURE_IDLE; // 0 : Measure humidity; 1 : Measure DS18B20; 2 : Measure MPU6050
 static bool   barBusy = FALSE;
 static uint8  humiState = 0;
 static uint8  ds18b20State = 0;
@@ -314,6 +325,7 @@ static void readMPU6050DataAdv( void );
 static void readDs18b20Data( void );
 static void readDs18b20Data1( uint8* mData, uint8 flagrom);
 static void readDs18b20WithState(uint8 state, uint8 flagrom);
+static void readDs18b20WithState1(uint8 state, uint8 flagrom);
 static void barometerChangeCB( uint8 paramID );
 static void irTempChangeCB( uint8 paramID );
 static void accelChangeCB( uint8 paramID );
@@ -612,7 +624,7 @@ void SensorTag_Init( uint8 task_id )
 
   //InitLed();
   initDS18B20();
-  
+
   // Enable clock divide on halt
   // This reduces active current while radio is active and CC254x MCU
   // is halted
@@ -637,7 +649,6 @@ void SensorTag_Init( uint8 task_id )
  */
 uint16 SensorTag_ProcessEvent( uint8 task_id, uint16 events )
 {
-  static int flagRom = 0;
   VOID task_id; // OSAL required parameter that isn't used in this function
 
   if ( events & SYS_EVENT_MSG )
@@ -678,12 +689,12 @@ uint16 SensorTag_ProcessEvent( uint8 task_id, uint16 events )
     //osal_start_timerEx( sensorTag_TaskID, ST_MPU6050_SENSOR_EVT, sensorMpu6050Period );
     return ( events ^ ST_START_DEVICE_EVT );
   }
-  if ( events & ST_LED_EVT )
+  if ( events & ST_DS18B20_CONTINUE_EVT )
   {
-    eggLeds();
-
-    osal_start_timerEx( sensorTag_TaskID, ST_LED_EVT, 500 );
-    return ( events ^ ST_LED_EVT );
+    //eggLeds();
+    //osal_start_timerEx( sensorTag_TaskID, ST_LED_EVT, 500 );
+    eggSerialAppSendNoti(gsendbuffer+17, 16);
+    return ( events ^ ST_DS18B20_CONTINUE_EVT );
   }
 
   //////////////////////////
@@ -741,6 +752,13 @@ uint16 SensorTag_ProcessEvent( uint8 task_id, uint16 events )
   {
     if(mpu6050Config != ST_CFG_SENSOR_DISABLE)
     {
+        if (gEggState == EGG_STATE_MEASURE_HUMIDITY||
+            gEggState == EGG_STATE_MEASURE_DS18B20)
+        {
+            osal_start_timerEx( sensorTag_TaskID, ST_MPU6050_SENSOR_EVT, 1000 );
+            return (events ^ ST_MPU6050_SENSOR_EVT);
+        }
+        //gEggState = 2;
         readMPU6050DataAdv();
         osal_start_timerEx( sensorTag_TaskID, ST_MPU6050_SENSOR_EVT, sensorMpu6050Period );
     }
@@ -759,6 +777,13 @@ uint16 SensorTag_ProcessEvent( uint8 task_id, uint16 events )
   {
     if (ds18b20Enabled == TRUE)
     {
+        if (gEggState == EGG_STATE_MEASURE_HUMIDITY ||
+            gEggState == EGG_STATE_MEASURE_MPU6050)
+        {//Try again after 1000ms.
+            osal_start_timerEx( sensorTag_TaskID, ST_DS18B20_SENSOR_EVT, 1000 );
+            return (events ^ ST_DS18B20_SENSOR_EVT);
+        }
+        gEggState = EGG_STATE_MEASURE_DS18B20;
         if (ds18b20State == 0)
         {
             readDs18b20WithState(0, flagRom);
@@ -776,11 +801,12 @@ uint16 SensorTag_ProcessEvent( uint8 task_id, uint16 events )
         {
             if (flagRom >= 14)
             {
+                gEggState = EGG_STATE_MEASURE_IDLE;
                 flagRom = 0;
                 osal_start_timerEx( sensorTag_TaskID, ST_DS18B20_SENSOR_EVT, sensorDs18b20Period );
             }
             else {
-                osal_start_timerEx( sensorTag_TaskID, ST_DS18B20_SENSOR_EVT, 1 );
+                osal_start_timerEx( sensorTag_TaskID, ST_DS18B20_SENSOR_EVT, 100 );
             }
             ds18b20State = 0;
         }
@@ -800,11 +826,26 @@ uint16 SensorTag_ProcessEvent( uint8 task_id, uint16 events )
   {
     if (humiEnabled)
     {
-      HalHumiExecMeasurementStep(humiState);
+      if (gEggState == EGG_STATE_MEASURE_MPU6050 ||
+          gEggState == EGG_STATE_MEASURE_DS18B20)
+      {
+        osal_start_timerEx( sensorTag_TaskID, ST_HUMIDITY_SENSOR_EVT, 1000 );//Try again after 1000ms.
+        return (events ^ ST_HUMIDITY_SENSOR_EVT);
+      }
+      gEggState = EGG_STATE_MEASURE_HUMIDITY;
+      bool returnValue = HalHumiExecMeasurementStep(humiState);
+      /*if (!returnValue)
+      {
+        gEggState = EGG_STATE_MEASURE_IDLE;
+        humiState = 0;
+        osal_start_timerEx( sensorTag_TaskID, ST_HUMIDITY_SENSOR_EVT, sensorHumPeriod );
+        return (events ^ ST_HUMIDITY_SENSOR_EVT);
+      }*/
       if (humiState == 2)
       {
         readHumData();
         humiState = 0;
+        gEggState = EGG_STATE_MEASURE_IDLE;
         osal_start_timerEx( sensorTag_TaskID, ST_HUMIDITY_SENSOR_EVT, sensorHumPeriod );
       }
       else
@@ -1191,6 +1232,7 @@ static void peripheralStateNotificationCB( gaprole_States_t newState )
 
     case GAPROLE_CONNECTED:
       HalLedSet(HAL_LED_1, HAL_LED_MODE_OFF );
+      gEggState = EGG_STATE_MEASURE_IDLE;
       mpu6050StarWhenConnected();
       humidityStarWhenConnected();
       ds18b20StarWhenConnected();
@@ -1282,7 +1324,7 @@ static void readMPU6050DataAdv( void )
     VOID osal_memcpy( sendbuffer+3, buffers, MPU6050_DATA_LEN );
     sendbuffer[15] = 0xFF;
     sendbuffer[16] = 0xFF;
-    Mpu6050_SetParameter(SENSOR_DATA, MPU6050_DATA_LEN, buffers);
+    //Mpu6050_SetParameter(SENSOR_DATA, MPU6050_DATA_LEN, buffers);
     eggSerialAppSendNoti(sendbuffer, MPU6050_DATA_LEN+5);
 }
 #endif
@@ -1417,8 +1459,6 @@ static void readDs18b20Data1( uint8* mData, uint8 flagrom)
     DS18B20_Write(0x44, 1);     //Æô¶¯ÎÂ¶È×ª»»
 }
 
-static uint8 gsendbuffer[36];
-static uint8 gsendbufferI;
 void readDs18b20WithState(uint8 state, uint8 flagrom)
 {
     uint8 rom[8] = {0x28, 0x5C, 0x1F, 0x92, 0x04, 0x00, 0x00, 0x26};
@@ -1428,14 +1468,14 @@ void readDs18b20WithState(uint8 state, uint8 flagrom)
     uint8 rom4[8] = {0x28, 0xBD, 0xA4, 0xA1, 0x05, 0x00, 0x00, 0x6C};
     uint8 rom5[8] = {0x28, 0xEB, 0x8E, 0xA1, 0x05, 0x00, 0x00, 0xB5};
     uint8 rom6[8] = {0x28, 0x37, 0xEC, 0x31, 0x03, 0x00, 0x00, 0xAE};
-    
+
     uint8 rom7[8] = {0x28, 0x5C, 0x1F, 0x92, 0x04, 0x00, 0x00, 0x26};
     uint8 rom8[8] = {0x28, 0x12, 0x91, 0xA1, 0x05, 0x00, 0x00, 0x42};
-    uint8 rom9[8] = {0x28, 0x12, 0x91, 0xA1, 0x05, 0x00, 0x00, 0x42};
-    uint8 rom10[8] = {0x28, 0xDA, 0xA1, 0xA1, 0x05, 0x00, 0x00, 0xF8};
-    uint8 rom11[8] = {0x28, 0x35, 0xAC, 0x31, 0x03, 0x00, 0x00, 0x29};
-    uint8 rom12[8] = {0x28, 0xBD, 0xA4, 0xA1, 0x05, 0x00, 0x00, 0x6C};
-    uint8 rom13[8] = {0x28, 0xEB, 0x8E, 0xA1, 0x05, 0x00, 0x00, 0xB5};
+    uint8 rom9[8] = {0x28, 0xDA, 0xA1, 0xA1, 0x05, 0x00, 0x00, 0xF8};
+    uint8 rom10[8] = {0x28, 0x35, 0xAC, 0x31, 0x03, 0x00, 0x00, 0x29};
+    uint8 rom11[8] = {0x28, 0xBD, 0xA4, 0xA1, 0x05, 0x00, 0x00, 0x6C};
+    uint8 rom12[8] = {0x28, 0xEB, 0x8E, 0xA1, 0x05, 0x00, 0x00, 0xB5};
+    uint8 rom13[8] = {0x28, 0x37, 0xEC, 0x31, 0x03, 0x00, 0x00, 0xAE};
     uint8 *pRom = rom;
     switch (flagrom) {
         case 0:
@@ -1506,7 +1546,7 @@ void readDs18b20WithState(uint8 state, uint8 flagrom)
         tem_h = DS18B20_Read();
         #else
         OneWire_reset();
-        DS18B20_select(pRom);
+        OneWire_select(pRom);
         OneWire_write(0xBE, 0);
         uint8 tem_h,tem_l;
         tem_l = OneWire_read();
@@ -1515,6 +1555,7 @@ void readDs18b20WithState(uint8 state, uint8 flagrom)
         if (flagrom == 0)
         {
             gsendbufferI = 0;
+            osal_memset(gsendbuffer, 0xFF, sizeof(gsendbuffer));
             gsendbuffer[gsendbufferI++] = 0xAA; // 0
             gsendbuffer[gsendbufferI++] = 0xBB;
             gsendbuffer[gsendbufferI++] = 0xBB; // 2
@@ -1531,16 +1572,122 @@ void readDs18b20WithState(uint8 state, uint8 flagrom)
             gsendbuffer[gsendbufferI++] = 0xFF;
             gsendbuffer[gsendbufferI++] = 0xFF;
             eggSerialAppSendNoti(gsendbuffer, 17);
+            //ST_HAL_DELAY(625);
+            ST_HAL_DELAY(1000);
             eggSerialAppSendNoti(gsendbuffer+17, 16);
-            Ds18b20_SetParameter(SENSOR_DATA, DS18B20_DATA_LEN, gsendbuffer+gsendbufferI-4);
+            //Ds18b20_SetParameter(SENSOR_DATA, DS18B20_DATA_LEN, gsendbuffer+gsendbufferI-4);
+            //osal_set_event( sensorTag_TaskID, ST_DS18B20_CONTINUE_EVT);
         }
         else
         {
-            Ds18b20_SetParameter(SENSOR_DATA, DS18B20_DATA_LEN, gsendbuffer+gsendbufferI-2);
+            //Ds18b20_SetParameter(SENSOR_DATA, DS18B20_DATA_LEN, gsendbuffer+gsendbufferI-2);
         }
     }
 }
 
+void readDs18b20WithState1(uint8 state, uint8 flagrom)
+{
+    uint8 rom[8] = {0x28, 0x5C, 0x1F, 0x92, 0x04, 0x00, 0x00, 0x26};
+    uint8 rom1[8] = {0x28, 0x12, 0x91, 0xA1, 0x05, 0x00, 0x00, 0x42};
+    uint8 rom2[8] = {0x28, 0xDA, 0xA1, 0xA1, 0x05, 0x00, 0x00, 0xF8};
+    uint8 rom3[8] = {0x28, 0x35, 0xAC, 0x31, 0x03, 0x00, 0x00, 0x29};
+    uint8 rom4[8] = {0x28, 0xBD, 0xA4, 0xA1, 0x05, 0x00, 0x00, 0x6C};
+    uint8 rom5[8] = {0x28, 0xEB, 0x8E, 0xA1, 0x05, 0x00, 0x00, 0xB5};
+    uint8 rom6[8] = {0x28, 0x37, 0xEC, 0x31, 0x03, 0x00, 0x00, 0xAE};
+
+    uint8 rom7[8] = {0x28, 0x5C, 0x1F, 0x92, 0x04, 0x00, 0x00, 0x26};
+    uint8 rom8[8] = {0x28, 0x12, 0x91, 0xA1, 0x05, 0x00, 0x00, 0x42};
+    uint8 rom9[8] = {0x28, 0xDA, 0xA1, 0xA1, 0x05, 0x00, 0x00, 0xF8};
+    uint8 rom10[8] = {0x28, 0x35, 0xAC, 0x31, 0x03, 0x00, 0x00, 0x29};
+    uint8 rom11[8] = {0x28, 0xBD, 0xA4, 0xA1, 0x05, 0x00, 0x00, 0x6C};
+    uint8 rom12[8] = {0x28, 0xEB, 0x8E, 0xA1, 0x05, 0x00, 0x00, 0xB5};
+    uint8 rom13[8] = {0x28, 0x37, 0xEC, 0x31, 0x03, 0x00, 0x00, 0xAE};
+    uint8 *pRom = rom;
+    switch (flagrom) {
+        case 0:
+            pRom = rom;
+            break;
+        case 1:
+            pRom = rom1;
+            break;
+        case 2:
+            pRom = rom2;
+            break;
+        case 3:
+            pRom = rom3;
+            break;
+        case 4:
+            pRom = rom4;
+            break;
+        case 5:
+            pRom = rom5;
+            break;
+        case 6:
+            pRom = rom6;
+            break;
+
+        case 7:
+            pRom = rom7;
+            break;
+        case 8:
+            pRom = rom8;
+            break;
+        case 9:
+            pRom = rom9;
+            break;
+        case 10:
+            pRom = rom10;
+            break;
+        case 11:
+            pRom = rom11;
+            break;
+        case 12:
+            pRom = rom12;
+            break;
+        case 13:
+            pRom = rom13;
+            break;
+        default:
+            pRom = rom;
+            break;
+    }
+    if (state == 0) {
+        #if 0
+        DS18B20_Init();
+        DS18B20_select(pRom);
+        DS18B20_Write(0x44, 1); //Start conversion, with parasite power on at the end.
+        #else
+        OneWire_reset();
+        OneWire_select(pRom);
+        OneWire_write(0x44, 1);
+        #endif
+    }
+    else {
+        #if 0
+        DS18B20_Init();
+        DS18B20_select(pRom);
+        DS18B20_Write(0xBE, 0); // Read scratchpad.
+        uint8 tem_h,tem_l;
+        tem_l = DS18B20_Read();
+        tem_h = DS18B20_Read();
+        #else
+        OneWire_reset();
+        OneWire_select(pRom);
+        OneWire_write(0xBE, 0);
+        uint8 tem_h,tem_l;
+        tem_l = OneWire_read();
+        tem_h = OneWire_read();
+        #endif
+        gsendbuffer[0] = 0xAA; // 0
+        gsendbuffer[1] = 0xBB;
+        gsendbuffer[2] = 0xBB; // 2
+        gsendbuffer[3] = tem_l;
+        gsendbuffer[4] = tem_h; // 4
+        gsendbuffer[5] = 0xFF;
+        gsendbuffer[6] = 0xFF;
+        eggSerialAppSendNoti(gsendbuffer, 7);
+    }
+}
 /*********************************************************************
  * @fn      readMagData
  *
@@ -1572,17 +1719,26 @@ static void readMagData( void )
 static void readHumData(void)
 {
   uint8 hData[HUMIDITY_DATA_LEN];
-
+  uint8 buffers[7];
   if (HalHumiReadMeasurement(hData))
   {
-    Humidity_SetParameter( SENSOR_DATA, HUMIDITY_DATA_LEN, hData);
+    //Humidity_SetParameter( SENSOR_DATA, HUMIDITY_DATA_LEN, hData);
 
-    uint8 buffers[7];
     buffers[0] = 0xAA;
     buffers[1] = 0xBB;
     buffers[2] = 0xCC;
     buffers[3] = hData[2];
     buffers[4] = hData[3];
+    buffers[5] = 0xFF;
+    buffers[6] = 0xFF;
+    eggSerialAppSendNoti(buffers, 7);
+  }
+  else{
+    buffers[0] = 0xAA;
+    buffers[1] = 0xBB;
+    buffers[2] = 0xCC;
+    buffers[3] = 0x76;
+    buffers[4] = 0x76;
     buffers[5] = 0xFF;
     buffers[6] = 0xFF;
     eggSerialAppSendNoti(buffers, 7);
@@ -1890,14 +2046,16 @@ static void mpu6050ChangeCB( uint8 paramID )
 
 static void ds18b20StarWhenConnected(void)
 {
-    
+
     if (!ds18b20Enabled)
     {
         ds18b20State = 0;
         ds18b20Enabled = TRUE;
+        flagRom = 0;
+        gsendbufferI = 0;
         osal_set_event( sensorTag_TaskID, ST_DS18B20_SENSOR_EVT);
     }
-    
+
 }
 
 static void ds18b20ChangeCB( uint8 paramID )
