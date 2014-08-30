@@ -1322,8 +1322,8 @@ static void readMPU6050DataAdv( void )
     sendbuffer[1] = 0xBB;
     sendbuffer[2] = 0xAA;
     VOID osal_memcpy( sendbuffer+3, buffers, MPU6050_DATA_LEN );
-    sendbuffer[15] = 0xFF;
-    sendbuffer[16] = 0xFF;
+    sendbuffer[15] = 0x0D;
+    sendbuffer[16] = 0x0A;
     //Mpu6050_SetParameter(SENSOR_DATA, MPU6050_DATA_LEN, buffers);
     eggSerialAppSendNoti(sendbuffer, MPU6050_DATA_LEN+5);
 }
