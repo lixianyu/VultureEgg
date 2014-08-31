@@ -1304,18 +1304,18 @@ static void readMPU6050DataAdv( void )
     int16 ax,ay,az,gx,gy,gz;
     uint8 buffers[MPU6050_DATA_LEN];
     HalMPU6050getMotion6(&ax, &ay, &az, &gx, &gy, &gz);
-    buffers[0] = ax >> 8;
-    buffers[1] = ax & 0xFF;
-    buffers[2] = ay >> 8;
-    buffers[3] = ay & 0xFF;
-    buffers[4] = az >> 8;
-    buffers[5] = az & 0xFF;
-    buffers[6] = gx >> 8;
-    buffers[7] = gx & 0xFF;
-    buffers[8] = gy >> 8;
-    buffers[9] = gy & 0xFF;
-    buffers[10] = gz >> 8;
-    buffers[11] = gz & 0xFF;
+    buffers[1] = ax >> 8;
+    buffers[0] = ax & 0xFF;
+    buffers[3] = ay >> 8;
+    buffers[2] = ay & 0xFF;
+    buffers[5] = az >> 8;
+    buffers[4] = az & 0xFF;
+    buffers[7] = gx >> 8;
+    buffers[6] = gx & 0xFF;
+    buffers[9] = gy >> 8;
+    buffers[8] = gy & 0xFF;
+    buffers[11] = gz >> 8;
+    buffers[10] = gz & 0xFF;
 
     uint8 sendbuffer[MPU6050_DATA_LEN+5];
     sendbuffer[0] = 0xAA;
@@ -1997,7 +1997,8 @@ static void mpu6050StarWhenConnected(void)
     if (mpu6050Config == ST_CFG_SENSOR_DISABLE)
     {
       // Start scheduling only on change disabled -> enabled
-      osal_set_event( sensorTag_TaskID, ST_MPU6050_SENSOR_EVT);
+      //osal_set_event( sensorTag_TaskID, ST_MPU6050_SENSOR_EVT);
+      osal_start_timerEx( sensorTag_TaskID, ST_MPU6050_SENSOR_EVT, sensorMpu6050Period );
       // Scheduled already, so just change range
       mpu6050Config = ST_CFG_SENSOR_ENABLE;
       HalMPU6050initialize();
