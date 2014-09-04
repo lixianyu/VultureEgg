@@ -593,9 +593,9 @@ uint8_t HalMPU6050dmpGetQuaternion(int32_t *data, const uint8_t* packet) {
 #endif
 uint8_t HalMPU6050dmpGetQuaternion(int16_t *data, const uint8_t* packet) {
     // TODO: accommodate different arrangements of sent data (ONLY default supported now)
-    if (packet == 0) {
-        return 1;
-    }
+    //if (packet == 0) {
+      //  return 1;
+    //}
     data[0] = ((packet[0] << 8) + packet[1]);
     data[1] = ((packet[4] << 8) + packet[5]);
     data[2] = ((packet[8] << 8) + packet[9]);

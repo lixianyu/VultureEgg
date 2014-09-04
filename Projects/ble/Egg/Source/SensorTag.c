@@ -312,7 +312,7 @@ static bool   testMode = FALSE;
 static uint16_t packetSize = 42;    // expected DMP packet size (default is 42 bytes)
 static uint16_t fifoCount;     // count of all bytes currently in FIFO
 static uint8_t fifoBuffer[64]; // FIFO storage buffer
-
+static uint8_t mpuIntStatus;
 /*********************************************************************
  * LOCAL FUNCTIONS
  */
@@ -766,18 +766,28 @@ uint16 SensorTag_ProcessEvent( uint8 task_id, uint16 events )
         }
         
         gEggState = EGG_STATE_MEASURE_MPU6050;
-        
+        mpuIntStatus = HalMPU6050getIntStatus();
         fifoCount = HalMPU6050getFIFOCount();
-        if (fifoCount < packetSize)
-        {
-            osal_start_timerEx( sensorTag_TaskID, ST_MPU6050_SENSOR_EVT, 10 );
-            return (events ^ ST_MPU6050_SENSOR_EVT);
+        if ((mpuIntStatus & 0x10) || fifoCount == 1024) {
+        //if (fifoCount == 1024) {
+        // reset so we can continue cleanly
+           HalMPU6050resetFIFO();
+           osal_start_timerEx( sensorTag_TaskID, ST_MPU6050_SENSOR_EVT, 10 );
+           return (events ^ ST_MPU6050_SENSOR_EVT);
         }
-//        readMPU6050DataAdv();
-        HalMPU6050getFIFOBytes(fifoBuffer, packetSize);
-        readMPU6050DmpData(fifoBuffer);
+        if (mpuIntStatus & 0x02)
+        {
+            while (fifoCount < packetSize) 
+            {
+                fifoCount = HalMPU6050getFIFOCount();
+            }
+            HalMPU6050getFIFOBytes(fifoBuffer, packetSize);
+            fifoCount -= packetSize;
+            readMPU6050DmpData(fifoBuffer);
+        }
         osal_start_timerEx( sensorTag_TaskID, ST_MPU6050_SENSOR_EVT, sensorMpu6050Period );
         gEggState = EGG_STATE_MEASURE_IDLE;
+        HalMPU6050resetFIFO();
     }
     else
     {
@@ -1375,6 +1385,9 @@ static void readMPU6050DataAdv( void )
 static void readMPU6050DmpData( uint8 *packet )
 {
     int16 ax,ay,az;
+    ax = 0;
+    ay = 0;
+    az = 0;
     uint8 buffers[MPU6050_DATA_LEN];
     int16_t qI[4];
     HalMPU6050getAcceleration(&ax, &ay, &az);
@@ -1387,15 +1400,25 @@ static void readMPU6050DmpData( uint8 *packet )
     buffers[2] = ay & 0xFF;
     buffers[5] = az >> 8;
     buffers[4] = az & 0xFF;
-    buffers[7] = qI[1];
-    buffers[6] = qI[0];
-    buffers[9] = qI[3];
-    buffers[8] = qI[2];
-    buffers[11] = qI[5];
-    buffers[10] = qI[4];
-    buffers[13] = qI[7];
-    buffers[12] = qI[6];
-    
+#if 1
+    buffers[7] = qI[0] >> 8;
+    buffers[6] = qI[0] & 0xFF;
+    buffers[9] = qI[1] >> 8;
+    buffers[8] = qI[1] & 0xFF;
+    buffers[11] = qI[2] >> 8;
+    buffers[10] = qI[2] & 0xFF;
+    buffers[13] = qI[3] >> 8;
+    buffers[12] = qI[3] & 0xFF;
+#else
+    buffers[6] = qI[0] >> 8;
+    buffers[7] = qI[0] & 0xFF;
+    buffers[8] = qI[1] >> 8;
+    buffers[9] = qI[1] & 0xFF;
+    buffers[10] = qI[2] >> 8;
+    buffers[11] = qI[2] & 0xFF;
+    buffers[12] = qI[3] >> 8;
+    buffers[13] = qI[3] & 0xFF;
+#endif
     uint8 sendbuffer[MPU6050_DATA_LEN+5];
     sendbuffer[0] = 0xAA;
     sendbuffer[1] = 0xBB;
