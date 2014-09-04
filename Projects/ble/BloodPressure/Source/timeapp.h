@@ -1,13 +1,12 @@
 /**************************************************************************************************
-  Filename:       devinfoservice-st.h
-  Revised:        $Date $
-  Revision:       $Revision $
+  Filename:       timeapp.h
+  Revised:        $Date: 2011-06-22 20:44:48 -0700 (Wed, 22 Jun 2011) $
+  Revision:       $Revision: 26428 $
 
-  Description:    This file contains the Device Information service definitions and
-                  prototypes.
+  Description:    This file contains the Time App sample application
+                  definitions and prototypes.
 
-
-  Copyright 2012 - 2013 Texas Instruments Incorporated. All rights reserved.
+  Copyright 2011 Texas Instruments Incorporated. All rights reserved.
 
   IMPORTANT: Your use of this Software is limited to those specific rights
   granted under the terms of a software license agreement between the user
@@ -38,8 +37,10 @@
   contact Texas Instruments Incorporated at www.TI.com.
 **************************************************************************************************/
 
-#ifndef DEVINFOSERVICE_H
-#define DEVINFOSERVICE_H
+#ifndef TIMEAPP_H
+#define TIMEAPP_H
+
+#include "gatt.h"
 
 #ifdef __cplusplus
 extern "C"
@@ -54,81 +55,86 @@ extern "C"
  * CONSTANTS
  */
 
-// Device Information Service Parameters
-#define DEVINFO_SYSTEM_ID                 0
-#define DEVINFO_MODEL_NUMBER              1
-#define DEVINFO_SERIAL_NUMBER             2
-#define DEVINFO_FIRMWARE_REV              3
-#define DEVINFO_HARDWARE_REV              4
-#define DEVINFO_SOFTWARE_REV              5
-#define DEVINFO_MANUFACTURER_NAME         6
-#define DEVINFO_11073_CERT_DATA           7
-#define DEVINFO_PNP_ID                    8
+// Time App discovery states
+enum
+{
+  DISC_IDLE = 0x00,                       // Idle state
+  DISC_CURR_TIME_START = 0x10,            // Current time service
+  DISC_CURR_TIME_SVC,                     // Discover service
+  DISC_CURR_TIME_CHAR,                    // Discover all characteristics
+  DISC_CURR_TIME_CT_TIME_CCCD,            // Discover CT time CCCD
+  DISC_FAILED = 0xFF                      // Discovery failed
+};
 
-// IEEE 11073 authoritative body values
-#define DEVINFO_11073_BODY_EMPTY          0
-#define DEVINFO_11073_BODY_IEEE           1
-#define DEVINFO_11073_BODY_CONTINUA       2
-#define DEVINFO_11073_BODY_EXP            254
+// Time App handle cache indexes
+enum
+{
+  HDL_CURR_TIME_CT_TIME_START,            // Current time start handle
+  HDL_CURR_TIME_CT_TIME_END,              // Current time end handle
+  HDL_CURR_TIME_CT_TIME_CCCD,             // Current time CCCD
+  HDL_CACHE_LEN
+};
 
-// System ID length
-#define DEVINFO_SYSTEM_ID_LEN             8
-#define DEVINFO_SERIAL_NUMBER_LEN         12
-
-  // PnP ID length
-#define DEVINFO_PNP_ID_LEN                7
-
-/*********************************************************************
- * TYPEDEFS
- */
+// Configuration states
+#define TIMEAPP_CONFIG_START              0x00
+#define TIMEAPP_CONFIG_CMPL               0xFF
 
 /*********************************************************************
  * MACROS
  */
 
+
 /*********************************************************************
- * Profile Callbacks
+ * GLOBAL
  */
 
+// Task ID
+extern uint8 bloodPressureTaskId;
+
+// Connection handle
+extern uint16 gapConnHandle;
+
+// Handle cache
+extern uint16 timeAppHdlCache[HDL_CACHE_LEN];
+
+// Task ID
+extern uint8 timeConfigDone;
 
 /*********************************************************************
- * API FUNCTIONS
+ * FUNCTIONS
  */
 
 /*
- * DevInfo_AddService- Initializes the Device Information service by registering
- *          GATT attributes with the GATT server.
- *
+ * Task Initialization for the BLE Application
  */
-
-extern bStatus_t DevInfo_AddService( void );
-
-/*********************************************************************
- * @fn      DevInfo_SetParameter
- *
- * @brief   Set a Device Information parameter.
- *
- * @param   param - Profile parameter ID
- * @param   len - length of data to right
- * @param   value - pointer to data to write.  This is dependent on
- *          the parameter ID and WILL be cast to the appropriate
- *          data type (example: data type of uint16 will be cast to
- *          uint16 pointer).
- *
- * @return  bStatus_t
- */
-bStatus_t DevInfo_SetParameter( uint8 param, uint8 len, void *value );
+extern void TimeApp_Init( uint8 task_id );
 
 /*
- * DevInfo_GetParameter - Get a Device Information parameter.
- *
- *    param - Profile parameter ID
- *    value - pointer to data to write.  This is dependent on
- *          the parameter ID and WILL be cast to the appropriate
- *          data type (example: data type of uint16 will be cast to
- *          uint16 pointer).
+ * Task Event Processor for the BLE Application
  */
-extern bStatus_t DevInfo_GetParameter( uint8 param, void *value );
+extern uint16 TimeApp_ProcessEvent( uint8 task_id, uint16 events );
+
+/*
+ * Time App clock functions
+ */
+extern void timeAppClockSet( uint8 *pData );
+
+/* 
+ * Time App service discovery functions
+ */
+extern uint8 timeAppDiscStart( void );
+extern uint8 timeAppDiscGattMsg( uint8 state, gattMsgEvent_t *pMsg );
+
+/* 
+ * Time App characteristic configuration functions
+ */
+extern uint8 timeAppConfigNext( uint8 state );
+extern uint8 timeAppConfigGattMsg( uint8 state, gattMsgEvent_t *pMsg );
+
+/* 
+ * Time App indication and notification handling functions
+ */
+extern void timeAppIndGattMsg( gattMsgEvent_t *pMsg );
 
 /*********************************************************************
 *********************************************************************/
@@ -137,4 +143,4 @@ extern bStatus_t DevInfo_GetParameter( uint8 param, void *value );
 }
 #endif
 
-#endif /* DEVINFOSERVICE_H */
+#endif /* TIMEAPP_H */

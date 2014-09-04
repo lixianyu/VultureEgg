@@ -2,6 +2,7 @@
 #define OneWire_h
 
 #include "comdef.h"
+#if 1
 typedef int8   int8_t;     //!< Signed 8 bit integer
 typedef uint8   uint8_t;    //!< Unsigned 8 bit integer
 
@@ -10,6 +11,7 @@ typedef uint16  uint16_t;   //!< Unsigned 16 bit integer
 
 typedef int32  int32_t;    //!< Signed 32 bit integer
 typedef uint32   uint32_t;   //!< Unsigned 32 bit integer
+#endif
 //typedef unsigned char   bool;     //!< Boolean data type
 
 // You can exclude certain features from OneWire.  In theory, this

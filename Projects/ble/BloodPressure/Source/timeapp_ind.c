@@ -1,13 +1,11 @@
 /**************************************************************************************************
-  Filename:       devinfoservice-st.h
-  Revised:        $Date $
-  Revision:       $Revision $
+  Filename:       timeapp_ind.c
+  Revised:        $Date: 2011-06-22 20:44:48 -0700 (Wed, 22 Jun 2011) $
+  Revision:       $Revision: 26428 $
 
-  Description:    This file contains the Device Information service definitions and
-                  prototypes.
+  Description:    Time App indication and notification handling routines.
 
-
-  Copyright 2012 - 2013 Texas Instruments Incorporated. All rights reserved.
+  Copyright 2011 Texas Instruments Incorporated. All rights reserved.
 
   IMPORTANT: Your use of this Software is limited to those specific rights
   granted under the terms of a software license agreement between the user
@@ -38,103 +36,103 @@
   contact Texas Instruments Incorporated at www.TI.com.
 **************************************************************************************************/
 
-#ifndef DEVINFOSERVICE_H
-#define DEVINFOSERVICE_H
-
-#ifdef __cplusplus
-extern "C"
-{
-#endif
-
 /*********************************************************************
  * INCLUDES
  */
+
+#include "string.h"
+#include "bcomdef.h"
+#include "OSAL.h"
+#include "OnBoard.h"
+#include "gatt.h"
+#include "gatt_uuid.h"
+#include "gattservapp.h"
+#include "timeapp.h"
+
+/*********************************************************************
+ * MACROS
+ */
+
+// Maximum category ID value
+#define ALERT_CAT_ID_MAX            9
+
+// Parse major category
+#define ALERT_MAJOR_CAT(x)          ( (x) >> 3 )
+
+// Parse subcategory
+#define ALERT_SUBCAT(x)             ( (x) & 0x07 )
 
 /*********************************************************************
  * CONSTANTS
  */
 
-// Device Information Service Parameters
-#define DEVINFO_SYSTEM_ID                 0
-#define DEVINFO_MODEL_NUMBER              1
-#define DEVINFO_SERIAL_NUMBER             2
-#define DEVINFO_FIRMWARE_REV              3
-#define DEVINFO_HARDWARE_REV              4
-#define DEVINFO_SOFTWARE_REV              5
-#define DEVINFO_MANUFACTURER_NAME         6
-#define DEVINFO_11073_CERT_DATA           7
-#define DEVINFO_PNP_ID                    8
-
-// IEEE 11073 authoritative body values
-#define DEVINFO_11073_BODY_EMPTY          0
-#define DEVINFO_11073_BODY_IEEE           1
-#define DEVINFO_11073_BODY_CONTINUA       2
-#define DEVINFO_11073_BODY_EXP            254
-
-// System ID length
-#define DEVINFO_SYSTEM_ID_LEN             8
-#define DEVINFO_SERIAL_NUMBER_LEN         12
-
-  // PnP ID length
-#define DEVINFO_PNP_ID_LEN                7
 
 /*********************************************************************
  * TYPEDEFS
  */
 
 /*********************************************************************
- * MACROS
+ * GLOBAL VARIABLES
  */
 
 /*********************************************************************
- * Profile Callbacks
+ * EXTERNAL VARIABLES
  */
-
 
 /*********************************************************************
- * API FUNCTIONS
+ * EXTERNAL FUNCTIONS
  */
-
-/*
- * DevInfo_AddService- Initializes the Device Information service by registering
- *          GATT attributes with the GATT server.
- *
- */
-
-extern bStatus_t DevInfo_AddService( void );
 
 /*********************************************************************
- * @fn      DevInfo_SetParameter
- *
- * @brief   Set a Device Information parameter.
- *
- * @param   param - Profile parameter ID
- * @param   len - length of data to right
- * @param   value - pointer to data to write.  This is dependent on
- *          the parameter ID and WILL be cast to the appropriate
- *          data type (example: data type of uint16 will be cast to
- *          uint16 pointer).
- *
- * @return  bStatus_t
+ * LOCAL VARIABLES
  */
-bStatus_t DevInfo_SetParameter( uint8 param, uint8 len, void *value );
 
-/*
- * DevInfo_GetParameter - Get a Device Information parameter.
- *
- *    param - Profile parameter ID
- *    value - pointer to data to write.  This is dependent on
- *          the parameter ID and WILL be cast to the appropriate
- *          data type (example: data type of uint16 will be cast to
- *          uint16 pointer).
+/*********************************************************************
+ * LOCAL FUNCTIONS
  */
-extern bStatus_t DevInfo_GetParameter( uint8 param, void *value );
+
+/*********************************************************************
+ * @fn      timeAppIndGattMsg
+ *
+ * @brief   Handle indications and notifications. 
+ *
+ * @param   pMsg - GATT message.
+ *
+ * @return  none
+ */
+void timeAppIndGattMsg( gattMsgEvent_t *pMsg )
+{
+  uint8 i;
+  
+  // Look up the handle in the handle cache
+  for ( i = 0; i < HDL_CACHE_LEN; i++ )
+  {
+    if ( pMsg->msg.handleValueNoti.handle == timeAppHdlCache[i] )
+    {
+      break;
+    }
+  }
+
+  // Perform processing for this handle 
+  switch ( i )
+  {
+    case HDL_CURR_TIME_CT_TIME_START:
+      // Set clock to time read from time server
+      timeAppClockSet( pMsg->msg.handleValueNoti.value );
+      break;
+      
+ 
+     default:
+      break;
+  }
+  
+  // Send confirm for indication
+  if ( pMsg->method == ATT_HANDLE_VALUE_IND )
+  {
+    ATT_HandleValueCfm( pMsg->connHandle );
+  }
+}
+
 
 /*********************************************************************
 *********************************************************************/
-
-#ifdef __cplusplus
-}
-#endif
-
-#endif /* DEVINFOSERVICE_H */

@@ -153,27 +153,27 @@ static uint8 devInfoSystemId[DEVINFO_SYSTEM_ID_LEN] = {0, 0, 0, 0, 0, 0, 0, 0};
 
 // Model Number String characteristic
 static uint8 devInfoModelNumberProps = GATT_PROP_READ;
-static const uint8 devInfoModelNumber[] = "N.A.";
+static const uint8 devInfoModelNumber[] = "AA01";
 
 // Serial Number String characteristic
 static uint8 devInfoSerialNumberProps = GATT_PROP_READ;
-static const uint8 devInfoSerialNumber[] = "N.A.";
+static uint8 devInfoSerialNumber[DEVINFO_SERIAL_NUMBER_LEN+1] = "123456789012";
 
 // Software Revision String characteristic
 static uint8 devInfoSoftwareRevProps = GATT_PROP_READ;
-static const uint8 devInfoSoftwareRev[] = "N.A.";
+static const uint8 devInfoSoftwareRev[] = "1.4.0";
 
 // Firmware Revision String characteristic
 static uint8 devInfoFirmwareRevProps = GATT_PROP_READ;
-static const uint8 devInfoFirmwareRev[] = "1.5 ("__DATE__")";
+static const uint8 devInfoFirmwareRev[] = "0.0.903";
 
 // Hardware Revision String characteristic
 static uint8 devInfoHardwareRevProps = GATT_PROP_READ;
-static const uint8 devInfoHardwareRev[] = "N.A.";
+static const uint8 devInfoHardwareRev[] = "0.1";
 
 // Manufacturer Name String characteristic
 static uint8 devInfoMfrNameProps = GATT_PROP_READ;
-static const uint8 devInfoMfrName[] = "Texas Instruments";
+static const uint8 devInfoMfrName[] = "HUOWEIYI Technology Co., Ltd.";
 
 
 // IEEE 11073-20601 Regulatory Certification Data List characteristic

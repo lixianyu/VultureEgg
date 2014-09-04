@@ -34,7 +34,7 @@ extern "C"
 #define MPU6050_SERVICE           0x00000002
 
 // Length of sensor data in bytes
-#define MPU6050_DATA_LEN          12
+#define MPU6050_DATA_LEN          14
 
 /*********************************************************************
  * TYPEDEFS

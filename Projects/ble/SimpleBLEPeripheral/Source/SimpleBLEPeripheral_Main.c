@@ -1,12 +1,12 @@
 /**************************************************************************************************
-  Filename:       SensorTag_Main.c
-  Revised:        $Date: 2012-08-08 17:04:23 -0700 (Wed, 08 Aug 2012) $
-  Revision:       $Revision: 31161 $
+  Filename:       SimpleBLEPeripheral_Main.c
+  Revised:        $Date: 2010-07-06 15:39:18 -0700 (Tue, 06 Jul 2010) $
+  Revision:       $Revision: 22902 $
 
   Description:    This file contains the main and callback functions for
-                  the Sensor Tag sample application.
+                  the Simple BLE Peripheral sample application.
 
-  Copyright 2012  Texas Instruments Incorporated. All rights reserved.
+  Copyright 2010 - 2011 Texas Instruments Incorporated. All rights reserved.
 
   IMPORTANT: Your use of this Software is limited to those specific rights
   granted under the terms of a software license agreement between the user
@@ -46,7 +46,6 @@
 #include "hal_timer.h"
 #include "hal_drivers.h"
 #include "hal_led.h"
-#include "hal_assert.h"
 
 /* OSAL */
 #include "OSAL.h"
@@ -55,12 +54,12 @@
 #include "osal_snv.h"
 #include "OnBoard.h"
 
-/* Application */
-#include "SensorTag.h"
-
 /**************************************************************************************************
  * FUNCTIONS
  **************************************************************************************************/
+
+/* This callback is triggered when a key is pressed */
+void MSA_Main_KeyCallback(uint8 keys, uint8 state);
 
 /**************************************************************************************************
  * @fn          main
@@ -86,6 +85,8 @@ int main(void)
   /* Initialize NV system */
   osal_snv_init();
 
+  /* Initialize LL */
+
   /* Initialize the operating system */
   osal_init_system();
 
@@ -98,9 +99,6 @@ int main(void)
   #if defined ( POWER_SAVING )
     osal_pwrmgr_device( PWRMGR_BATTERY );
   #endif
-
-  /* Run power on self-test */
-  //sensorTag_test();
 
   /* Start OSAL */
   osal_start_system(); // No Return from here

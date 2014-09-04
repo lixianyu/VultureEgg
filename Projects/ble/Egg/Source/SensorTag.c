@@ -40,7 +40,7 @@
 /*********************************************************************
  * INCLUDES
  */
-
+#include <string.h>
 #include "bcomdef.h"
 #include "OSAL.h"
 #include "OSAL_PwrMgr.h"
@@ -95,7 +95,8 @@
 #include "hal_mag.h"
 #include "hal_bar.h"
 #include "hal_gyro.h"
-#include "MPU6050.h"
+//#include "MPU6050.h"
+#include "MPU6050_6Axis_MotionApps20Egg.h"
 #include "OneWire.h"
 
 /*********************************************************************
@@ -118,13 +119,13 @@
 
 // How often to perform sensor reads (milliseconds)
 #define TEMP_DEFAULT_PERIOD                   1000
-#define HUM_DEFAULT_PERIOD                    6000
+#define HUM_DEFAULT_PERIOD                    70000
 #define BAR_DEFAULT_PERIOD                    1000
 #define MAG_DEFAULT_PERIOD                    2000
 #define ACC_DEFAULT_PERIOD                    1000
 #define GYRO_DEFAULT_PERIOD                   1000
-#define MPU6050_DEFAULT_PERIOD                1000
-#define DS18B20_DEFAULT_PERIOD                8000
+#define MPU6050_DEFAULT_PERIOD                2000
+#define DS18B20_DEFAULT_PERIOD                60000
 
 // Constants for two-stage reading
 #define TEMP_MEAS_DELAY                       275   // Conversion time 250 ms
@@ -308,6 +309,10 @@ static bool   sensorGyroUpdateAxes = FALSE;
 static uint16 selfTestResult = 0;
 static bool   testMode = FALSE;
 
+static uint16_t packetSize = 42;    // expected DMP packet size (default is 42 bytes)
+static uint16_t fifoCount;     // count of all bytes currently in FIFO
+static uint8_t fifoBuffer[64]; // FIFO storage buffer
+
 /*********************************************************************
  * LOCAL FUNCTIONS
  */
@@ -322,6 +327,7 @@ static void readBarData( void );
 static void readBarCalibration( void );
 static void readGyroData( void );
 static void readMPU6050DataAdv( void );
+static void readMPU6050DmpData( uint8 *packet );
 static void readDs18b20Data( void );
 static void readDs18b20Data1( uint8* mData, uint8 flagrom);
 static void readDs18b20WithState(uint8 state, uint8 flagrom);
@@ -758,9 +764,20 @@ uint16 SensorTag_ProcessEvent( uint8 task_id, uint16 events )
             osal_start_timerEx( sensorTag_TaskID, ST_MPU6050_SENSOR_EVT, 1000 );
             return (events ^ ST_MPU6050_SENSOR_EVT);
         }
-        //gEggState = 2;
-        readMPU6050DataAdv();
+        
+        gEggState = EGG_STATE_MEASURE_MPU6050;
+        
+        fifoCount = HalMPU6050getFIFOCount();
+        if (fifoCount < packetSize)
+        {
+            osal_start_timerEx( sensorTag_TaskID, ST_MPU6050_SENSOR_EVT, 10 );
+            return (events ^ ST_MPU6050_SENSOR_EVT);
+        }
+//        readMPU6050DataAdv();
+        HalMPU6050getFIFOBytes(fifoBuffer, packetSize);
+        readMPU6050DmpData(fifoBuffer);
         osal_start_timerEx( sensorTag_TaskID, ST_MPU6050_SENSOR_EVT, sensorMpu6050Period );
+        gEggState = EGG_STATE_MEASURE_IDLE;
     }
     else
     {
@@ -770,6 +787,13 @@ uint16 SensorTag_ProcessEvent( uint8 task_id, uint16 events )
     return (events ^ ST_MPU6050_SENSOR_EVT);
   }
 
+  if (events & ST_MPU6050_DMP_INIT_EVT)
+  {
+    HalMPU6050dmpInitialize();
+    HalMPU6050setDMPEnabled(true);
+    osal_start_timerEx( sensorTag_TaskID, ST_MPU6050_SENSOR_EVT, 4000 );
+    return (events ^ ST_MPU6050_DMP_INIT_EVT);
+  }
   //////////////////////////
   //    DS18B20           //
   //////////////////////////
@@ -1203,26 +1227,46 @@ static void peripheralStateNotificationCB( gaprole_States_t newState )
   {
     case GAPROLE_STARTED:
     {
-      uint8 ownAddress[B_ADDR_LEN];
-      uint8 systemId[DEVINFO_SYSTEM_ID_LEN];
+        // Set the system ID from the bd addr
+        uint8 systemId[DEVINFO_SYSTEM_ID_LEN];
+        uint8 systemIdBak[DEVINFO_SYSTEM_ID_LEN];
+        GAPRole_GetParameter(GAPROLE_BD_ADDR, systemId);
+        osal_memcpy(systemIdBak, systemId, DEVINFO_SYSTEM_ID_LEN);
 
-      GAPRole_GetParameter(GAPROLE_BD_ADDR, ownAddress);
+        // shift three bytes up
+        systemId[7] = systemId[5];
+        systemId[6] = systemId[4];
+        systemId[5] = systemId[3];
 
-      // use 6 bytes of device address for 8 bytes of system ID value
-      systemId[0] = ownAddress[0];
-      systemId[1] = ownAddress[1];
-      systemId[2] = ownAddress[2];
+        // set middle bytes to zero
+        systemId[4] = 0;
+        systemId[3] = 0;
+        DevInfo_SetParameter(DEVINFO_SYSTEM_ID, DEVINFO_SYSTEM_ID_LEN, systemId);
 
-      // set middle bytes to zero
-      systemId[4] = 0x00;
-      systemId[3] = 0x00;
+        // Set the serial number from the bd addr.
+        uint8 serialNumber[DEVINFO_SERIAL_NUMBER_LEN+2] = "\0";
+        uint8 aNumber;
+        uint8 j = 0;
+        for (int8 i = B_ADDR_LEN-1; i >= 0; i--)
+        {
+            aNumber = systemIdBak[i];
+            if (aNumber < 10)
+            {
+                strcat((char*)serialNumber+j*2, (const char*)"0");
+                _itoa(aNumber, serialNumber+j*2+1, 16);
+            }
+            else
+            {
+                _itoa(aNumber, serialNumber+j*2, 16);
+            }
 
-      // shift three bytes up
-      systemId[7] = ownAddress[5];
-      systemId[6] = ownAddress[4];
-      systemId[5] = ownAddress[3];
-
-      DevInfo_SetParameter(DEVINFO_SYSTEM_ID, DEVINFO_SYSTEM_ID_LEN, systemId);
+            /*if (osal_memcmp(&aNumber, &Zero, 1) == TRUE)
+            {
+                strcat((char*)serialNumber+j*2+1, (const char*)"0");
+            }*/
+            j++;
+        }
+        DevInfo_SetParameter(DEVINFO_SERIAL_NUMBER, DEVINFO_SERIAL_NUMBER_LEN, serialNumber);
     }
     break;
 
@@ -1234,8 +1278,8 @@ static void peripheralStateNotificationCB( gaprole_States_t newState )
       HalLedSet(HAL_LED_1, HAL_LED_MODE_OFF );
       gEggState = EGG_STATE_MEASURE_IDLE;
       mpu6050StarWhenConnected();
-      humidityStarWhenConnected();
-      ds18b20StarWhenConnected();
+      //humidityStarWhenConnected();
+      //ds18b20StarWhenConnected();
       break;
 
     case GAPROLE_WAITING:
@@ -1302,7 +1346,7 @@ static void readMPU6050DataAdv( void )
 static void readMPU6050DataAdv( void )
 {
     int16 ax,ay,az,gx,gy,gz;
-    uint8 buffers[MPU6050_DATA_LEN];
+    uint8 buffers[12];
     HalMPU6050getMotion6(&ax, &ay, &az, &gx, &gy, &gz);
     buffers[1] = ax >> 8;
     buffers[0] = ax & 0xFF;
@@ -1317,13 +1361,48 @@ static void readMPU6050DataAdv( void )
     buffers[11] = gz >> 8;
     buffers[10] = gz & 0xFF;
 
+    uint8 sendbuffer[12+5];
+    sendbuffer[0] = 0xAA;
+    sendbuffer[1] = 0xBB;
+    sendbuffer[2] = 0xAA;
+    VOID osal_memcpy( sendbuffer+3, buffers, 12 );
+    sendbuffer[15] = 0x0D;
+    sendbuffer[16] = 0x0A;
+    //Mpu6050_SetParameter(SENSOR_DATA, MPU6050_DATA_LEN, buffers);
+    eggSerialAppSendNoti(sendbuffer, 12+5);
+}
+
+static void readMPU6050DmpData( uint8 *packet )
+{
+    int16 ax,ay,az;
+    uint8 buffers[MPU6050_DATA_LEN];
+    int16_t qI[4];
+    HalMPU6050getAcceleration(&ax, &ay, &az);
+    HalMPU6050dmpGetQuaternion(qI, packet);
+//    float w = (float)qI[0] / 16384.0f;
+        
+    buffers[1] = ax >> 8;
+    buffers[0] = ax & 0xFF;
+    buffers[3] = ay >> 8;
+    buffers[2] = ay & 0xFF;
+    buffers[5] = az >> 8;
+    buffers[4] = az & 0xFF;
+    buffers[7] = qI[1];
+    buffers[6] = qI[0];
+    buffers[9] = qI[3];
+    buffers[8] = qI[2];
+    buffers[11] = qI[5];
+    buffers[10] = qI[4];
+    buffers[13] = qI[7];
+    buffers[12] = qI[6];
+    
     uint8 sendbuffer[MPU6050_DATA_LEN+5];
     sendbuffer[0] = 0xAA;
     sendbuffer[1] = 0xBB;
     sendbuffer[2] = 0xAA;
     VOID osal_memcpy( sendbuffer+3, buffers, MPU6050_DATA_LEN );
-    sendbuffer[15] = 0x0D;
-    sendbuffer[16] = 0x0A;
+    sendbuffer[17] = 0x0D;
+    sendbuffer[18] = 0x0A;
     //Mpu6050_SetParameter(SENSOR_DATA, MPU6050_DATA_LEN, buffers);
     eggSerialAppSendNoti(sendbuffer, MPU6050_DATA_LEN+5);
 }
@@ -1998,10 +2077,12 @@ static void mpu6050StarWhenConnected(void)
     {
       // Start scheduling only on change disabled -> enabled
       //osal_set_event( sensorTag_TaskID, ST_MPU6050_SENSOR_EVT);
-      osal_start_timerEx( sensorTag_TaskID, ST_MPU6050_SENSOR_EVT, sensorMpu6050Period );
+      //osal_start_timerEx( sensorTag_TaskID, ST_MPU6050_SENSOR_EVT, sensorMpu6050Period );
       // Scheduled already, so just change range
       mpu6050Config = ST_CFG_SENSOR_ENABLE;
       HalMPU6050initialize();
+
+      osal_start_timerEx( sensorTag_TaskID, ST_MPU6050_DMP_INIT_EVT, 10000 );
     }
 }
 

@@ -1,5 +1,6 @@
 settings
-CC2541DK-mini Keyfob Slave
+*.bin
+*.sfr
 *.pbi
 *.pbi.cout
 *.pbd
@@ -9,6 +10,4 @@ CC2541DK-mini Keyfob Slave
 *.hex
 *.dep
 *.map
-*.sfr
-BloodPressure
-SimpleBLEPeripheral
+*.sim

@@ -779,7 +779,7 @@ extern void HalMPU6050setDMPConfig2(uint8_t config);
 // special methods for MotionApps 2.0 implementation
 #ifdef MPU6050_INCLUDE_DMP_MOTIONAPPS20
     uint8_t *dmpPacketBuffer;
-    uint16_t dmpPacketSize;
+    //static uint16_t dmpPacketSize = 42;
 
     extern uint8_t HalMPU6050dmpInitialize();
     extern bool HalMPU6050dmpPacketAvailable();
@@ -812,11 +812,12 @@ extern void HalMPU6050setDMPConfig2(uint8_t config);
 */
             // Get Fixed Point data from FIFO
             // All packet default value is 0 --- by Phobos.
-    extern uint8_t HalMPU6050dmpGetAccel(int32_t *data, const uint8_t* packet);
-    extern uint8_t HalMPU6050dmpGetAccel(int16_t *data, const uint8_t* packet);
-    extern uint8_t HalMPU6050dmpGetAccel(VectorInt16 *v, const uint8_t* packet);
-    extern uint8_t HalMPU6050dmpGetQuaternion(int32_t *data, const uint8_t* packet);
+    //extern uint8_t HalMPU6050dmpGetAccel(int32_t *data, const uint8_t* packet);
+    //extern uint8_t HalMPU6050dmpGetAccel(int16_t *data, const uint8_t* packet);
+    //extern uint8_t HalMPU6050dmpGetAccel(VectorInt16 *v, const uint8_t* packet);
+    //extern uint8_t HalMPU6050dmpGetQuaternion(int32_t *data, const uint8_t* packet);
     extern uint8_t HalMPU6050dmpGetQuaternion(int16_t *data, const uint8_t* packet);
+/*
     extern uint8_t HalMPU6050dmpGetQuaternion(Quaternion *q, const uint8_t* packet);
     extern uint8_t HalMPU6050dmpGet6AxisQuaternion(int32_t *data, const uint8_t* packet);
     extern uint8_t HalMPU6050dmpGet6AxisQuaternion(int16_t *data, const uint8_t* packet);
@@ -859,7 +860,7 @@ extern void HalMPU6050setDMPConfig2(uint8_t config);
 
     extern uint8_t HalMPU6050dmpGetEuler(float *data, Quaternion *q);
     extern uint8_t HalMPU6050dmpGetYawPitchRoll(float *data, Quaternion *q, VectorFloat *gravity);
-
+*/
             // Get Floating Point data from FIFO
     extern uint8_t HalMPU6050dmpGetAccelFloat(float *data, const uint8_t* packet);
     extern uint8_t HalMPU6050dmpGetQuaternionFloat(float *data, const uint8_t* packet);
@@ -867,7 +868,7 @@ extern void HalMPU6050setDMPConfig2(uint8_t config);
     extern uint8_t HalMPU6050dmpProcessFIFOPacket(const unsigned char *dmpData);
     //extern uint8_t HalMPU6050dmpReadAndProcessFIFOPacket(uint8_t numPackets, uint8_t *processed=NULL);
     extern uint8_t HalMPU6050dmpReadAndProcessFIFOPacket(uint8_t numPackets, uint8_t *processed);
-    extern uint8_t HalMPU6050dmpSetFIFOProcessedCallback(extern void HalMPU6050(*func) (void));
+//    extern uint8_t HalMPU6050dmpSetFIFOProcessedCallback(extern void HalMPU6050(*func) (void));
 
     extern uint8_t HalMPU6050dmpInitFIFOParam();
     extern uint8_t HalMPU6050dmpCloseFIFO();

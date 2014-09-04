@@ -1,12 +1,13 @@
 /**************************************************************************************************
-  Filename:       SensorTag_Main.c
-  Revised:        $Date: 2012-08-08 17:04:23 -0700 (Wed, 08 Aug 2012) $
-  Revision:       $Revision: 31161 $
+  Filename:       bloodPressure_Main.c
+  Revised:        $Date: 2011-04-12 08:04:58 -0700 (Tue, 12 Apr 2011) $
+  Revision:       $Revision: 25664 $
 
   Description:    This file contains the main and callback functions for
-                  the Sensor Tag sample application.
+                  the BloodPressure Rate sample application.
 
-  Copyright 2012  Texas Instruments Incorporated. All rights reserved.
+
+  Copyright 2011 Texas Instruments Incorporated. All rights reserved.
 
   IMPORTANT: Your use of this Software is limited to those specific rights
   granted under the terms of a software license agreement between the user
@@ -22,7 +23,7 @@
   its documentation for any purpose.
 
   YOU FURTHER ACKNOWLEDGE AND AGREE THAT THE SOFTWARE AND DOCUMENTATION ARE
-  PROVIDED “AS IS" WITHOUT WARRANTY OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+  PROVIDED “AS IS?WITHOUT WARRANTY OF ANY KIND, EITHER EXPRESS OR IMPLIED,
   INCLUDING WITHOUT LIMITATION, ANY WARRANTY OF MERCHANTABILITY, TITLE,
   NON-INFRINGEMENT AND FITNESS FOR A PARTICULAR PURPOSE. IN NO EVENT SHALL
   TEXAS INSTRUMENTS OR ITS LICENSORS BE LIABLE OR OBLIGATED UNDER CONTRACT,
@@ -46,7 +47,6 @@
 #include "hal_timer.h"
 #include "hal_drivers.h"
 #include "hal_led.h"
-#include "hal_assert.h"
 
 /* OSAL */
 #include "OSAL.h"
@@ -55,12 +55,6 @@
 #include "osal_snv.h"
 #include "OnBoard.h"
 
-/* Application */
-#include "SensorTag.h"
-
-/**************************************************************************************************
- * FUNCTIONS
- **************************************************************************************************/
 
 /**************************************************************************************************
  * @fn          main
@@ -85,6 +79,8 @@ int main(void)
 
   /* Initialize NV system */
   osal_snv_init();
+  
+  /* Initialize LL */
 
   /* Initialize the operating system */
   osal_init_system();
@@ -98,10 +94,7 @@ int main(void)
   #if defined ( POWER_SAVING )
     osal_pwrmgr_device( PWRMGR_BATTERY );
   #endif
-
-  /* Run power on self-test */
-  //sensorTag_test();
-
+    
   /* Start OSAL */
   osal_start_system(); // No Return from here
 
