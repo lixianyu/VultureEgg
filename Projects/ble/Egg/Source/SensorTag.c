@@ -1299,8 +1299,8 @@ static void peripheralStateNotificationCB( gaprole_States_t newState )
         HalLedSet(HAL_LED_1, HAL_LED_MODE_OFF );
         gEggState = EGG_STATE_MEASURE_IDLE;
         mpu6050StarWhenConnected();
-        //humidityStarWhenConnected();
-        //ds18b20StarWhenConnected();
+        humidityStarWhenConnected();
+        ds18b20StarWhenConnected();
         break;
 
     case GAPROLE_WAITING:
@@ -1682,8 +1682,8 @@ void readDs18b20WithState(uint8 state, uint8 flagrom)
         }
         if (flagrom == 13)
         {
-            gsendbuffer[gsendbufferI++] = 0xFF;
-            gsendbuffer[gsendbufferI++] = 0xFF;
+            gsendbuffer[gsendbufferI++] = 0x0D;
+            gsendbuffer[gsendbufferI++] = 0x0A;
             eggSerialAppSendNoti(gsendbuffer, 17);
             //ST_HAL_DELAY(625);
             ST_HAL_DELAY(1000);
@@ -1842,8 +1842,8 @@ static void readHumData(void)
     buffers[2] = 0xCC;
     buffers[3] = hData[2];
     buffers[4] = hData[3];
-    buffers[5] = 0xFF;
-    buffers[6] = 0xFF;
+    buffers[5] = 0x0D;
+    buffers[6] = 0x0A;
     eggSerialAppSendNoti(buffers, 7);
   }
   else{
@@ -1852,8 +1852,8 @@ static void readHumData(void)
     buffers[2] = 0xCC;
     buffers[3] = 0x76;
     buffers[4] = 0x76;
-    buffers[5] = 0xFF;
-    buffers[6] = 0xFF;
+    buffers[5] = 0x0D;
+    buffers[6] = 0x0A;
     eggSerialAppSendNoti(buffers, 7);
   }
 }
@@ -2162,16 +2162,15 @@ static void mpu6050ChangeCB( uint8 paramID )
 
 static void ds18b20StarWhenConnected(void)
 {
-
     if (!ds18b20Enabled)
     {
         ds18b20State = 0;
         ds18b20Enabled = TRUE;
         flagRom = 0;
         gsendbufferI = 0;
-        osal_set_event( sensorTag_TaskID, ST_DS18B20_SENSOR_EVT);
+        //osal_set_event( sensorTag_TaskID, ST_DS18B20_SENSOR_EVT);
+        osal_start_timerEx( sensorTag_TaskID, ST_DS18B20_SENSOR_EVT, 5000 );
     }
-
 }
 
 static void ds18b20ChangeCB( uint8 paramID )
