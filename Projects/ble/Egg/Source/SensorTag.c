@@ -142,13 +142,13 @@
 #define DEFAULT_DISCOVERABLE_MODE             GAP_ADTYPE_FLAGS_GENERAL
 
 // Minimum connection interval (units of 1.25ms, 80=100ms) if automatic parameter update request is enabled
-#define DEFAULT_DESIRED_MIN_CONN_INTERVAL     80
+#define DEFAULT_DESIRED_MIN_CONN_INTERVAL     303
 
 // Maximum connection interval (units of 1.25ms, 800=1000ms) if automatic parameter update request is enabled
-#define DEFAULT_DESIRED_MAX_CONN_INTERVAL     800
+#define DEFAULT_DESIRED_MAX_CONN_INTERVAL     319
 
 // Slave latency to use if automatic parameter update request is enabled
-#define DEFAULT_DESIRED_SLAVE_LATENCY         0
+#define DEFAULT_DESIRED_SLAVE_LATENCY         4
 
 // Supervision timeout value (units of 10ms, 1000=10s) if automatic parameter update request is enabled
 #define DEFAULT_DESIRED_CONN_TIMEOUT          600
@@ -157,7 +157,7 @@
 #define DEFAULT_ENABLE_UPDATE_REQUEST         TRUE
 
 // Connection Pause Peripheral time value (in seconds)
-#define DEFAULT_CONN_PAUSE_PERIPHERAL         8
+#define DEFAULT_CONN_PAUSE_PERIPHERAL         4
 
 // Company Identifier: Texas Instruments Inc. (13)
 #define TI_COMPANY_ID                         0x000D
@@ -1003,6 +1003,14 @@ uint16 SensorTag_ProcessEvent( uint8 task_id, uint16 events )
     return (events ^ ST_GYROSCOPE_SENSOR_EVT);
   }
 
+  if ( events & ST_CONN_PARAM_UPDATE_EVT )
+  {
+    // Send param update.  If it fails, retry until successful.
+    GAPRole_SendUpdateParam( DEFAULT_DESIRED_MIN_CONN_INTERVAL, DEFAULT_DESIRED_MAX_CONN_INTERVAL,
+                             DEFAULT_DESIRED_SLAVE_LATENCY, DEFAULT_DESIRED_CONN_TIMEOUT,
+                             GAPROLE_TERMINATE_LINK );
+    return (events ^ ST_CONN_PARAM_UPDATE_EVT);
+  }
 #if defined ( PLUS_BROADCASTER )
   if ( events & ST_ADV_IN_CONNECTION_EVT )
   {
@@ -1285,12 +1293,15 @@ static void peripheralStateNotificationCB( gaprole_States_t newState )
 	    break;
 
     case GAPROLE_CONNECTED:
-      HalLedSet(HAL_LED_1, HAL_LED_MODE_OFF );
-      gEggState = EGG_STATE_MEASURE_IDLE;
-      mpu6050StarWhenConnected();
-      //humidityStarWhenConnected();
-      //ds18b20StarWhenConnected();
-      break;
+        // Set timer to update connection parameters
+        // 5 seconds should allow enough time for Service Discovery by the collector to finish
+        osal_start_timerEx( sensorTag_TaskID, ST_CONN_PARAM_UPDATE_EVT, 6000);
+        HalLedSet(HAL_LED_1, HAL_LED_MODE_OFF );
+        gEggState = EGG_STATE_MEASURE_IDLE;
+        mpu6050StarWhenConnected();
+        //humidityStarWhenConnected();
+        //ds18b20StarWhenConnected();
+        break;
 
     case GAPROLE_WAITING:
       // Link terminated intentionally: reset all sensors

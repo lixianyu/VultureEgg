@@ -420,7 +420,9 @@ bStatus_t DevInfo_SetParameter( uint8 param, uint8 len, void *value )
      case DEVINFO_SYSTEM_ID:
       osal_memcpy(devInfoSystemId, value, len);
       break;
-
+     case DEVINFO_SERIAL_NUMBER:
+      osal_memcpy((void*)devInfoSerialNumber, value, len);
+      break;
     default:
       ret = INVALIDPARAMETER;
       break;
