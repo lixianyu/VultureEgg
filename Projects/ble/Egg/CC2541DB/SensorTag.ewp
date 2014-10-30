@@ -3233,7 +3233,7 @@
       <name>$PROJ_DIR$\..\Source\SensorTag.c</name>
     </file>
     <file>
-      <name>$PROJ_DIR$\..\Source\sensorTag.h</name>
+      <name>$PROJ_DIR$\..\Source\SensorTag.h</name>
     </file>
     <file>
       <name>$PROJ_DIR$\..\Source\SensorTag_Main.c</name>
@@ -3339,6 +3339,9 @@
           <name>$PROJ_DIR$\..\..\..\..\Components\hal\target\CC2541ST\hal_led.c</name>
         </file>
         <file>
+          <name>$PROJ_DIR$\..\..\..\..\Components\hal\target\CC2541ST\hal_LM75A_nxp.c</name>
+        </file>
+        <file>
           <name>$PROJ_DIR$\..\..\..\..\Components\hal\target\CC2541ST\hal_mag.c</name>
         </file>
         <file>
@@ -3387,10 +3390,10 @@
           <name>$PROJ_DIR$\..\..\..\..\Components\hal\target\CC2541ST\hal_i2c.h</name>
         </file>
         <file>
-          <name>$PROJ_DIR$\..\..\..\..\Components\hal\target\CC2541ST\hal_irtemp.h</name>
+          <name>$PROJ_DIR$\..\..\..\..\Components\hal\target\CC2541ST\hal_keys.h</name>
         </file>
         <file>
-          <name>$PROJ_DIR$\..\..\..\..\Components\hal\target\CC2541ST\hal_keys.h</name>
+          <name>$PROJ_DIR$\..\..\..\..\Components\hal\target\CC2541ST\hal_LM75A_nxp.h</name>
         </file>
         <file>
           <name>$PROJ_DIR$\..\..\..\..\Components\hal\target\CC2541ST\hal_mag.h</name>

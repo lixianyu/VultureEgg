@@ -90,6 +90,7 @@
 #include "hal_sensor.h"
 
 #include "hal_irtemp.h"
+#include "hal_LM75A_nxp.h"
 #include "hal_acc.h"
 #include "hal_humi.h"
 #include "hal_mag.h"
@@ -285,7 +286,7 @@ typedef enum
 {
     EGG_STATE_MEASURE_IDLE,
     EGG_STATE_MEASURE_HUMIDITY,
-    EGG_STATE_MEASURE_DS18B20,
+    EGG_STATE_MEASURE_LM75A,
     EGG_STATE_MEASURE_MPU6050
 } t_enum_EggState;
 static t_enum_EggState gEggState = EGG_STATE_MEASURE_IDLE; // 0 : Measure humidity; 1 : Measure DS18B20; 2 : Measure MPU6050
@@ -351,6 +352,7 @@ static void resetCharacteristicValues( void );
 static void mpu6050StarWhenConnected(void);
 static void humidityStarWhenConnected(void);
 static void ds18b20StarWhenConnected(void);
+static void lm75aStarWhenConnected(void);
 static void eggSerialAppSendNoti(uint8 *pBuffer,uint16 length);
 /*********************************************************************
  * PROFILE CALLBACKS
@@ -759,7 +761,7 @@ uint16 SensorTag_ProcessEvent( uint8 task_id, uint16 events )
     if(mpu6050Config != ST_CFG_SENSOR_DISABLE)
     {
         if (gEggState == EGG_STATE_MEASURE_HUMIDITY||
-            gEggState == EGG_STATE_MEASURE_DS18B20)
+            gEggState == EGG_STATE_MEASURE_LM75A)
         {
             osal_start_timerEx( sensorTag_TaskID, ST_MPU6050_SENSOR_EVT, 1000 );
             return (events ^ ST_MPU6050_SENSOR_EVT);
@@ -817,7 +819,7 @@ uint16 SensorTag_ProcessEvent( uint8 task_id, uint16 events )
             osal_start_timerEx( sensorTag_TaskID, ST_DS18B20_SENSOR_EVT, 1000 );
             return (events ^ ST_DS18B20_SENSOR_EVT);
         }
-        gEggState = EGG_STATE_MEASURE_DS18B20;
+        gEggState = EGG_STATE_MEASURE_LM75A;
         if (ds18b20State == 0)
         {
             readDs18b20WithState(0, flagRom);
@@ -852,7 +854,24 @@ uint16 SensorTag_ProcessEvent( uint8 task_id, uint16 events )
     }
     return (events ^ ST_DS18B20_SENSOR_EVT);
   }
-
+  //////////////////////////
+  //    LM75A             //
+  //////////////////////////
+  if ( events & ST_LM75A_SENSOR_EVT )
+  {
+    if (gEggState == EGG_STATE_MEASURE_HUMIDITY ||
+        gEggState == EGG_STATE_MEASURE_MPU6050)
+    {   //Try again after 1500ms.
+        osal_start_timerEx( sensorTag_TaskID, ST_LM75A_SENSOR_EVT, 1500 );
+        return (events ^ ST_LM75A_SENSOR_EVT);
+    }
+    gEggState = EGG_STATE_MEASURE_LM75A;
+    uint8 lm75abuffer[16] = {0};
+    HalLM75ATempReadAll(lm75abuffer);
+    eggSerialAppSendNoti(lm75abuffer, 16);
+    gEggState = EGG_STATE_MEASURE_IDLE;
+    return (events ^ ST_LM75A_SENSOR_EVT);
+  }
   //////////////////////////
   //      Humidity        //
   //////////////////////////
@@ -861,7 +880,7 @@ uint16 SensorTag_ProcessEvent( uint8 task_id, uint16 events )
     if (humiEnabled)
     {
       if (gEggState == EGG_STATE_MEASURE_MPU6050 ||
-          gEggState == EGG_STATE_MEASURE_DS18B20)
+          gEggState == EGG_STATE_MEASURE_LM75A)
       {
         osal_start_timerEx( sensorTag_TaskID, ST_HUMIDITY_SENSOR_EVT, 1000 );//Try again after 1000ms.
         return (events ^ ST_HUMIDITY_SENSOR_EVT);
@@ -1298,9 +1317,10 @@ static void peripheralStateNotificationCB( gaprole_States_t newState )
         osal_start_timerEx( sensorTag_TaskID, ST_CONN_PARAM_UPDATE_EVT, 6000);
         HalLedSet(HAL_LED_1, HAL_LED_MODE_OFF );
         gEggState = EGG_STATE_MEASURE_IDLE;
-        mpu6050StarWhenConnected();
-        humidityStarWhenConnected();
-        ds18b20StarWhenConnected();
+        //mpu6050StarWhenConnected();
+        //humidityStarWhenConnected();
+        //ds18b20StarWhenConnected();
+        lm75aStarWhenConnected();
         break;
 
     case GAPROLE_WAITING:
@@ -2158,6 +2178,11 @@ static void mpu6050ChangeCB( uint8 paramID )
       // Should not get here
       break;
   }
+}
+
+static void lm75aStarWhenConnected(void)
+{
+    osal_start_timerEx( sensorTag_TaskID, ST_LM75A_SENSOR_EVT, 5000 );
 }
 
 static void ds18b20StarWhenConnected(void)

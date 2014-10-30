@@ -29,9 +29,8 @@ extern "C"
  */
 typedef enum
 {
-  LM75A_OFF,               // LM75A Temperature Sleeping
-  LM75A_IDLE,			   // LM75A Temperature On and Configured
-  LM75A_DATA_READY         // LM75A Temperature On, Configured and Data is Ready	
+  LM75A_OFF,               // LM75A Temperature shutdown
+  LM75A_NORMAL,			   // LM75A Temperature On normal
 } LM75ATemperature_States_t;
 
 
@@ -39,12 +38,12 @@ typedef enum
  * FUNCTIONS
  */
 void HALLM75ATempInit(void);
-void HalLM75ATempTurnOn(void);
-void HalLM75ATempTurnOff(void);
-bool HalLM75ATempRead(uint8 *lm75aTempData);
-bool HalLM75ATempTest(void);
-IRTemperature_States_t HalLM75ATempStatus(void);
-
+void HalLM75ATempTurnOn(uint8 id);
+void HalLM75ATempTurnOff(uint8 id);
+bool HalLM75ATempRead(uint8 id, uint8 *pBuf);
+//bool HalLM75ATempTest(void);
+LM75ATemperature_States_t HalLM75ATempStatus(uint8 id);
+int8 HalLM75ATempReadAll(uint8 *pBuf);
 
 #ifdef __cplusplus
 }

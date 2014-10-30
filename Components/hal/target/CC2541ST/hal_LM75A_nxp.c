@@ -41,7 +41,7 @@
 *                                          Includes
 * ------------------------------------------------------------------------------------------------
 */
-#include "hal_irtemp.h"
+#include "hal_LM75A_nxp.h"
 #include "hal_i2c.h"
 #include "hal_sensor.h"
 
@@ -49,6 +49,8 @@
 *                                           Constants
 * ------------------------------------------------------------------------------------------------
 */
+
+#define LM75A_NUMBER                    8
 
 /* Slave address */
 #define LM75A_I2C_ADDRESS0              0x90
@@ -95,8 +97,8 @@ static void HalLM75ATempSelect(uint8 id);
 static LM75ATemperature_States_t irtSensorState = LM75A_OFF;
 
 //static uint8 configSensorReset[2] = {0x80, 0x00};  // Sensor reset
-//static uint8 configSensorOff[2] = {0x00, 0x80};    // Sensor standby
-//static uint8 configSensorOn[2] =  {0x70, 0x00};    // Conversion time 0.25 sec
+static uint8 configLM75AOff[1] = {0x01};    // LM75A shutdown
+static uint8 configLM75AOn[1] =  {0x00};    // LM75A normal
 
 /* ------------------------------------------------------------------------------------------------
 *                                           Public functions
@@ -113,8 +115,11 @@ static LM75ATemperature_States_t irtSensorState = LM75A_OFF;
  **************************************************************************************************/
 void HALLM75ATempInit(void)
 {
-  irtSensorState = TMP006_OFF;
-  HalLM75ATempTurnOff();
+  irtSensorState = LM75A_OFF;
+  for (int i = 0; i < LM75A_NUMBER; i++)
+  {
+    HalLM75ATempTurnOff(i);
+  }
 }
 
 
@@ -130,9 +135,9 @@ void HalLM75ATempTurnOn(uint8 id)
   //HalDcDcControl(ST_IRTEMP,true);
   HalLM75ATempSelect(id);
 
-  if (HalSensorWriteReg(LM75A_REG_ADDR_CONFIG, configSensorOn, 1))
+  if (HalSensorWriteReg(LM75A_REG_ADDR_CONFIG, configLM75AOn, 1))
   {
-    irtSensorState = LM75A_IDLE;
+    irtSensorState = LM75A_NORMAL;
   }
 }
 
@@ -147,7 +152,7 @@ void HalLM75ATempTurnOff(uint8 id)
 {
   HalLM75ATempSelect(id);
 
-  if (HalSensorWriteReg(LM75A_REG_ADDR_CONFIG, configSensorOff, 1))
+  if (HalSensorWriteReg(LM75A_REG_ADDR_CONFIG, configLM75AOff, 1))
   {
     irtSensorState = LM75A_OFF;
   }
@@ -163,24 +168,23 @@ void HalLM75ATempTurnOff(uint8 id)
  *
  * @return      TRUE if valid data
  **************************************************************************************************/
-bool HalLM75ATempRead(uint8 *pBuf)
+bool HalLM75ATempRead(uint8 id, uint8 *pBuf)
 {
-  uint16 v;
-  uint16 t;
+  uint16 t = 0;
   bool success;
 
-  if (irtSensorState != LM75A_DATA_READY)
+  if (irtSensorState != LM75A_NORMAL)
   {
     return FALSE;
   }
 
-  HalLM75ATempSelect();
+  HalLM75ATempSelect(id);
 
   // Read the sensor registers
   //success = HalSensorReadReg(LM75A_REG_ADDR_VOLTAGE, (uint8 *)&v,IRTEMP_REG_LEN );
   //if (success)
   {
-    success = HalSensorReadReg(LM75A_REG_ADDR_TEMPERATURE, (uint8 *)&t,IRTEMP_REG_LEN );
+    success = HalSensorReadReg(LM75A_REG_ADDR_TEMPERATURE, (uint8 *)&t, 2 );
   }
 
   if (success)
@@ -193,15 +197,44 @@ bool HalLM75ATempRead(uint8 *pBuf)
   }
 
   // Turn off sensor
-  if (HalSensorWriteReg(LM75A_REG_ADDR_CONFIG, configSensorOff, 1))
+  if (HalSensorWriteReg(LM75A_REG_ADDR_CONFIG, configLM75AOff, 1))
   {
-    irtSensorState = TMP006_OFF;
+    irtSensorState = LM75A_OFF;
   }
   //HalDcDcControl(ST_IRTEMP,false);
 
   return success;
 }
 
+/**************************************************************************************************
+ * @fn          HalLM75ATempReadAll
+ *
+ * @brief       Read all LM75A temperature
+ *
+ * @param       Temperature in raw format (8*2=16 bytes)
+ *
+ * @return      0 if valid data
+ **************************************************************************************************/
+int8 HalLM75ATempReadAll(uint8 *pBuf)
+{
+    uint16 t = 0;
+    uint8 *p = pBuf;
+    bool success;
+    for (int id = 0; id < LM75A_NUMBER; id++)
+    {
+        HalLM75ATempSelect(id);
+        HalSensorWriteReg(LM75A_REG_ADDR_CONFIG, configLM75AOn, 1);
+        success = HalSensorReadReg(LM75A_REG_ADDR_TEMPERATURE, (uint8 *)&t, 2 );
+        if (success)
+        {
+            *p = HI_UINT16( t );
+            *(p+1) = LO_UINT16( t );
+            p += 2;
+        }
+        HalSensorWriteReg(LM75A_REG_ADDR_CONFIG, configLM75AOff, 1);
+    }
+    return 0;
+}
 
 /**************************************************************************************************
  * @fn          HalLM75ATempStatus
@@ -212,26 +245,7 @@ bool HalLM75ATempRead(uint8 *pBuf)
  **************************************************************************************************/
 LM75ATemperature_States_t HalLM75ATempStatus(uint8 id)
 {
-  if (irtSensorState != LM75A_OFF)
-  {
-    /*
-    bool success;
-    uint16 v;
-
-    // Select this sensor on the I2C bus
-    HalLM75ATempSelect(id);
-
-    // Read the data ready bit
-    success = HalSensorReadReg(LM75A_REG_ADDR_CONFIG, (uint8 *)&v,1 );
-    if ((v & DATA_RDY_BIT) && success)
-    {
-      irtSensorState = TMP006_DATA_READY;
-    }
-    */
-    irtSensorState = LM75A_DATA_READY;
-  }
-
-  return irtSensorState;
+    return irtSensorState;
 }
 
 
