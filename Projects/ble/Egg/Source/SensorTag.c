@@ -251,14 +251,15 @@ static uint8 advertData[] =
   0x02,   // length of this data
   GAP_ADTYPE_FLAGS,
   DEFAULT_DISCOVERABLE_MODE | GAP_ADTYPE_FLAGS_BREDR_NOT_SUPPORTED,
-#if 0
-  0x0f,
+#if 1
+  19,
   GAP_ADTYPE_16BIT_MORE,
 
   0x44,0x44, // This the magic number.
-  0x01,0x02,0x03,0x04,// Here is Temperature.
-  0x05,0x06,0x07,0x08,// Here is Humidity.
-  0x09,0x0a,0x0b,0x0c,// Here is Barometer.
+/*7*/   0x01,0x02,0x03,0x04,
+/*11*/  0x05,0x06,0x07,0x08,
+/*15*/  0x09,0x0a,0x0b,0x0c,
+/*19*/  0x0d,0x0e,0x0f,0x10,
 #else
   0x03,
   GAP_ADTYPE_16BIT_MORE,
@@ -695,6 +696,7 @@ uint16 SensorTag_ProcessEvent( uint8 task_id, uint16 events )
 
     //osal_start_timerEx( sensorTag_TaskID, ST_LED_EVT, 500 );
     //osal_start_timerEx( sensorTag_TaskID, ST_MPU6050_SENSOR_EVT, sensorMpu6050Period );
+//    osal_start_timerEx( sensorTag_TaskID, ST_LM75A_SENSOR_TEST_EVT, 6000 );
     return ( events ^ ST_START_DEVICE_EVT );
   }
   if ( events & ST_DS18B20_CONTINUE_EVT )
@@ -857,6 +859,14 @@ uint16 SensorTag_ProcessEvent( uint8 task_id, uint16 events )
   //////////////////////////
   //    LM75A             //
   //////////////////////////
+  if (events & ST_LM75A_SENSOR_TEST_EVT)
+  {
+    uint8 lm75abuffer[16] = {0};
+    HalLM75ATempReadAll(lm75abuffer);
+    osal_memcpy(&advertData[7], lm75abuffer, sizeof(lm75abuffer));
+    osal_start_timerEx( sensorTag_TaskID, ST_LM75A_SENSOR_TEST_EVT, 6000 );
+    return (events ^ ST_LM75A_SENSOR_TEST_EVT);
+  }
   if ( events & ST_LM75A_SENSOR_EVT )
   {
     if (gEggState == EGG_STATE_MEASURE_HUMIDITY ||
@@ -868,7 +878,17 @@ uint16 SensorTag_ProcessEvent( uint8 task_id, uint16 events )
     gEggState = EGG_STATE_MEASURE_LM75A;
     uint8 lm75abuffer[16] = {0};
     HalLM75ATempReadAll(lm75abuffer);
-    eggSerialAppSendNoti(lm75abuffer, 16);
+    osal_memset(gsendbuffer, 0xFF, sizeof(gsendbuffer));
+    gsendbuffer[0] = 0xAA; // 0
+    gsendbuffer[1] = 0xBB;
+    gsendbuffer[2] = 0xBB; // 2
+    osal_memcpy(gsendbuffer+3, lm75abuffer, sizeof(lm75abuffer));
+    gsendbuffer[3+sizeof(lm75abuffer)] = 0x0D;
+    gsendbuffer[3+sizeof(lm75abuffer)+1] = 0x0A;
+    eggSerialAppSendNoti(gsendbuffer, 11);
+    //ST_HAL_DELAY(625);
+    ST_HAL_DELAY(1000);
+    eggSerialAppSendNoti(gsendbuffer+11, 10);
     gEggState = EGG_STATE_MEASURE_IDLE;
     return (events ^ ST_LM75A_SENSOR_EVT);
   }

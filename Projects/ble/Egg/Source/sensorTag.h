@@ -68,7 +68,8 @@ extern "C"
 #define ST_DS18B20_CONTINUE_EVT                          0x0400
 #define ST_MPU6050_DMP_INIT_EVT                          0x0800
 #define ST_CONN_PARAM_UPDATE_EVT                         0x1000
-#define ST_LM75A_SENSOR_EVT                              0x2000
+#define ST_LM75A_SENSOR_TEST_EVT                         0x2000
+#define ST_LM75A_SENSOR_EVT                              0x4000
 /*********************************************************************
  * MACROS
  */
