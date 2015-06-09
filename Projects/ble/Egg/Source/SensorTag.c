@@ -255,7 +255,7 @@ static uint8 advertData[] =
   19,
   GAP_ADTYPE_16BIT_MORE,
 
-  0x44,0x44, // This the magic number.
+  0x45,0x45, // This the magic number.
 /*7*/   0x01,0x02,0x03,0x04,
 /*11*/  0x05,0x06,0x07,0x08,
 /*15*/  0x09,0x0a,0x0b,0x0c,
@@ -540,7 +540,6 @@ void SensorTag_Init( uint8 task_id )
     // Set the GAP Role Parameters
     GAPRole_SetParameter( GAPROLE_ADVERT_ENABLED, sizeof( uint8 ), &initial_advertising_enable );
     GAPRole_SetParameter( GAPROLE_ADVERT_OFF_TIME, sizeof( uint16 ), &gapRole_AdvertOffTime );
-
     GAPRole_SetParameter( GAPROLE_SCAN_RSP_DATA, sizeof ( scanRspData ), scanRspData );
     GAPRole_SetParameter( GAPROLE_ADVERT_DATA, sizeof( advertData ), advertData );
 
@@ -696,7 +695,7 @@ uint16 SensorTag_ProcessEvent( uint8 task_id, uint16 events )
 
     //osal_start_timerEx( sensorTag_TaskID, ST_LED_EVT, 500 );
     //osal_start_timerEx( sensorTag_TaskID, ST_MPU6050_SENSOR_EVT, sensorMpu6050Period );
-//    osal_start_timerEx( sensorTag_TaskID, ST_LM75A_SENSOR_TEST_EVT, 6000 );
+    osal_start_timerEx( sensorTag_TaskID, ST_LM75A_SENSOR_TEST_EVT, 5000 );
     return ( events ^ ST_START_DEVICE_EVT );
   }
   if ( events & ST_DS18B20_CONTINUE_EVT )
@@ -862,11 +861,15 @@ uint16 SensorTag_ProcessEvent( uint8 task_id, uint16 events )
   if (events & ST_LM75A_SENSOR_TEST_EVT)
   {
     uint8 lm75abuffer[16] = {0};
+//    HalLM75ATempTurnOn(1);
     HalLM75ATempReadAll(lm75abuffer);
-    osal_memcpy(&advertData[7], lm75abuffer, sizeof(lm75abuffer));
+//    HalLM75ATempRead(1, lm75abuffer);
+    osal_memcpy(advertData+7, lm75abuffer, sizeof(lm75abuffer));
+    GAPRole_SetParameter( GAPROLE_ADVERT_DATA, sizeof( advertData ), advertData );
     osal_start_timerEx( sensorTag_TaskID, ST_LM75A_SENSOR_TEST_EVT, 6000 );
     return (events ^ ST_LM75A_SENSOR_TEST_EVT);
   }
+  
   if ( events & ST_LM75A_SENSOR_EVT )
   {
     if (gEggState == EGG_STATE_MEASURE_HUMIDITY ||
@@ -1340,7 +1343,7 @@ static void peripheralStateNotificationCB( gaprole_States_t newState )
         //mpu6050StarWhenConnected();
         //humidityStarWhenConnected();
         //ds18b20StarWhenConnected();
-        lm75aStarWhenConnected();
+        //lm75aStarWhenConnected();
         break;
 
     case GAPROLE_WAITING:

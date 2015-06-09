@@ -53,14 +53,14 @@
 #define LM75A_NUMBER                    8
 
 /* Slave address */
-#define LM75A_I2C_ADDRESS0              0x90
-#define LM75A_I2C_ADDRESS1              0x92
-#define LM75A_I2C_ADDRESS2              0x94
-#define LM75A_I2C_ADDRESS3              0x96
-#define LM75A_I2C_ADDRESS4              0x98
-#define LM75A_I2C_ADDRESS5              0x9A
-#define LM75A_I2C_ADDRESS6              0x9C
-#define LM75A_I2C_ADDRESS7              0x9E
+#define LM75A_I2C_ADDRESS0              0x48
+#define LM75A_I2C_ADDRESS1              0x49
+#define LM75A_I2C_ADDRESS2              0x4A
+#define LM75A_I2C_ADDRESS3              0x4B
+#define LM75A_I2C_ADDRESS4              0x4C
+#define LM75A_I2C_ADDRESS5              0x4D
+#define LM75A_I2C_ADDRESS6              0x4E
+#define LM75A_I2C_ADDRESS7              0x4F
 
 /* LM75A register addresses */
 #define LM75A_REG_ADDR_TEMPERATURE     0x00
@@ -227,11 +227,12 @@ int8 HalLM75ATempReadAll(uint8 *pBuf)
         success = HalSensorReadReg(LM75A_REG_ADDR_TEMPERATURE, (uint8 *)&t, 2 );
         if (success)
         {
-            *p = HI_UINT16( t );
-            *(p+1) = LO_UINT16( t );
+            *p = LO_UINT16( t );
+            *(p+1) = HI_UINT16( t );
             p += 2;
         }
         HalSensorWriteReg(LM75A_REG_ADDR_CONFIG, configLM75AOff, 1);
+        t = 0;
     }
     return 0;
 }
@@ -320,7 +321,7 @@ static void HalLM75ATempSelect(uint8 id)
     switch (id)
     {
         case 0:
-            HalI2CInit(LM75A_I2C_ADDRESS0, i2cClock_267KHZ);
+            HalI2CInit(LM75A_I2C_ADDRESS0, i2cClock_533KHZ);
             break;
 
         case 1:
