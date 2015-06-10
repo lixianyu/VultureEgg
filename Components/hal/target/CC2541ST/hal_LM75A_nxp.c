@@ -49,6 +49,7 @@
 *                                           Constants
 * ------------------------------------------------------------------------------------------------
 */
+//#define MOVE_RIGHT5
 
 #define LM75A_NUMBER                    8
 
@@ -181,21 +182,21 @@ bool HalLM75ATempRead(uint8 id, uint8 *pBuf)
   HalLM75ATempSelect(id);
 
   // Read the sensor registers
-  //success = HalSensorReadReg(LM75A_REG_ADDR_VOLTAGE, (uint8 *)&v,IRTEMP_REG_LEN );
-  //if (success)
-  {
-    success = HalSensorReadReg(LM75A_REG_ADDR_TEMPERATURE, temp, 2 );
-  }
+
+  success = HalSensorReadReg(LM75A_REG_ADDR_TEMPERATURE, temp, 2 );
 
   if (success)
   {
     // Store values
-    //pBuf[0] = HI_UINT16( v );
-    //pBuf[1] = LO_UINT16( v );
-    //pBuf[0] = HI_UINT16( t );
-    //pBuf[1] = LO_UINT16( t );
+#if defined(MOVE_RIGHT5)
+    t = BUILD_UINT16(temp[1], temp[0]);
+    t = t >> 5;
+    pBuf[0] = HI_UINT16( t );
+    pBuf[1] = LO_UINT16( t );
+#else
     pBuf[0] = temp[0];
     pBuf[1] = temp[1];
+#endif
   }
 
   // Turn off sensor
@@ -232,12 +233,15 @@ int8 HalLM75ATempReadAll(uint8 *pBuf)
         success = HalSensorReadReg(LM75A_REG_ADDR_TEMPERATURE, temp, 2 );
         if (success)
         {
+        #if defined(MOVE_RIGHT5)
             t = BUILD_UINT16(temp[1], temp[0]);
             t = t >> 5;
             *p = HI_UINT16( t );
             *(p+1) = LO_UINT16( t );
-            //*p = temp[0];
-            //*(p+1) = temp[1];
+        #else
+            *p = temp[0];
+            *(p + 1) = temp[1];
+        #endif
         }
         p += 2;
         HalSensorWriteReg(LM75A_REG_ADDR_CONFIG, configLM75AOff, 1);

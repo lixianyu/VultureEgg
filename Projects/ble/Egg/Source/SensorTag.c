@@ -632,7 +632,7 @@ void SensorTag_Init( uint8 task_id )
   VOID GAPRole_RegisterAppCBs( &paramUpdateCB );
 
   //InitLed();
-  initDS18B20();
+  //initDS18B20();
 
   // Enable clock divide on halt
   // This reduces active current while radio is active and CC254x MCU
@@ -694,9 +694,11 @@ uint16 SensorTag_ProcessEvent( uint8 task_id, uint16 events )
     // Start Bond Manager
     VOID GAPBondMgr_Register( &sensorTag_BondMgrCBs );
 
+    HALLM75ATempInit();
+    EggLM75ATempInit();
     //osal_start_timerEx( sensorTag_TaskID, ST_LED_EVT, 500 );
     //osal_start_timerEx( sensorTag_TaskID, ST_MPU6050_SENSOR_EVT, sensorMpu6050Period );
-    osal_start_timerEx( sensorTag_TaskID, ST_LM75A_SENSOR_TEST_EVT, 5000 );
+    //osal_start_timerEx( sensorTag_TaskID, ST_LM75A_SENSOR_GPIO_EVT, 5000 );
     return ( events ^ ST_START_DEVICE_EVT );
   }
   if ( events & ST_DS18B20_CONTINUE_EVT )
@@ -859,21 +861,32 @@ uint16 SensorTag_ProcessEvent( uint8 task_id, uint16 events )
   //////////////////////////
   //    LM75A             //
   //////////////////////////
-  if (events & ST_LM75A_SENSOR_TEST_EVT)
+  if (events & ST_LM75A_SENSOR_GPIO_EVT)
   {
-    static bool bswitch = TRUE;
     uint8 lm75abuffer[16] = {0};
     //HalLM75ATempTurnOn(1);
     //HalLM75ATempRead(1, lm75abuffer);
-    if (bswitch)
-        HalLM75ATempReadAll(lm75abuffer);
-    else
-        EggReadAllLM75ATemp(lm75abuffer);
-    //bswitch = !bswitch;
-    osal_memcpy(advertData+7, lm75abuffer, sizeof(lm75abuffer));
-    GAPRole_SetParameter( GAPROLE_ADVERT_DATA, sizeof( advertData ), advertData );
-    osal_start_timerEx( sensorTag_TaskID, ST_LM75A_SENSOR_TEST_EVT, 4000 );
-    return (events ^ ST_LM75A_SENSOR_TEST_EVT);
+    EggReadAllLM75ATemp(lm75abuffer);
+    //HalLM75ATempReadAll(lm75abuffer);
+    //osal_memcpy(advertData+7, lm75abuffer, sizeof(lm75abuffer));
+    //GAPRole_SetParameter( GAPROLE_ADVERT_DATA, sizeof( advertData ), advertData );
+    //osal_start_timerEx( sensorTag_TaskID, ST_LM75A_SENSOR_GPIO_EVT, 4000 );
+    #if 1
+    osal_memset(gsendbuffer, 0xFF, sizeof(gsendbuffer));
+    gsendbuffer[0] = 0xAA; // 0
+    gsendbuffer[1] = 0xBB;
+    gsendbuffer[2] = 0xBB; // 2
+    osal_memcpy(gsendbuffer+3, lm75abuffer, sizeof(lm75abuffer));
+    gsendbuffer[3+sizeof(lm75abuffer)] = 0x0D;
+    gsendbuffer[3+sizeof(lm75abuffer)+1] = 0x0A;
+    eggSerialAppSendNoti(gsendbuffer, 11);
+    //ST_HAL_DELAY(625); //Delay 5ms
+    ST_HAL_DELAY(1001); //Delay 8ms
+    eggSerialAppSendNoti(gsendbuffer+11, 10);
+    gEggState = EGG_STATE_MEASURE_IDLE;
+    osal_start_timerEx( sensorTag_TaskID, ST_LM75A_SENSOR_EVT, 60000 );
+    #endif
+    return (events ^ ST_LM75A_SENSOR_GPIO_EVT);
   }
   
   if ( events & ST_LM75A_SENSOR_EVT )
@@ -898,9 +911,11 @@ uint16 SensorTag_ProcessEvent( uint8 task_id, uint16 events )
     //ST_HAL_DELAY(625); //Delay 5ms
     ST_HAL_DELAY(1000); //Delay 8ms
     eggSerialAppSendNoti(gsendbuffer+11, 10);
-    gEggState = EGG_STATE_MEASURE_IDLE;
+    //gEggState = EGG_STATE_MEASURE_IDLE;
+    osal_start_timerEx( sensorTag_TaskID, ST_LM75A_SENSOR_GPIO_EVT, 400 );
     return (events ^ ST_LM75A_SENSOR_EVT);
   }
+  
   //////////////////////////
   //      Humidity        //
   //////////////////////////
@@ -1349,7 +1364,7 @@ static void peripheralStateNotificationCB( gaprole_States_t newState )
         //mpu6050StarWhenConnected();
         //humidityStarWhenConnected();
         //ds18b20StarWhenConnected();
-        //lm75aStarWhenConnected();
+        lm75aStarWhenConnected();
         break;
 
     case GAPROLE_WAITING:
@@ -2211,7 +2226,7 @@ static void mpu6050ChangeCB( uint8 paramID )
 
 static void lm75aStarWhenConnected(void)
 {
-    osal_start_timerEx( sensorTag_TaskID, ST_LM75A_SENSOR_EVT, 5000 );
+    osal_start_timerEx( sensorTag_TaskID, ST_LM75A_SENSOR_EVT, 3999 );
 }
 
 static void ds18b20StarWhenConnected(void)

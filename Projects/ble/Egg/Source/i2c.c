@@ -8,20 +8,7 @@
 #include "hal_mcu.h"
 #include "i2c.h"
 
-/*
-#define HIGH            1                 //高电平
-#define LOW             0                 //低电平
-#define SCK             P0_0 //Should be OUTPUT
-#define DOUT            P0_2 //Should be INPUT
-*/
-/*
-#define uint32
-#define uint16
-#define uint8
-#define int32
-#define int16
-#define int8
-*/
+//#define MOVE_RIGHT5_EGG
 
 /* GPIO setting */
 #define SDA_GPIO P0_4
@@ -86,6 +73,16 @@ static void delay_nus(uint16 timeout);
 static void EggLM75ATempSelect(uint8 id);
 static void I2C_Stop(void);
 static bool EggReadReg(uint8 addr, uint8 *pBuf, uint8 nBytes);
+static void EggTurnOffLM75A(void);
+
+void EggLM75ATempInit(void)
+{
+  for (int i = 0; i < LM75A_NUMBER; i++)
+  {
+    EggLM75ATempSelect(i);
+    EggTurnOffLM75A();
+  }
+}
 
 void EggTurnOnLM75A(void)
 {
@@ -185,7 +182,7 @@ void EggTurnOnLM75A(void)
      I2C_Stop();
 }
 
-void EggTurnOffLM75A(void)
+static void EggTurnOffLM75A(void)
 {
     int8 i, ack, data;
     SET_SCL_OUTPUT;
@@ -298,12 +295,15 @@ int8 EggReadAllLM75ATemp(uint8 *pBuf)
         success = EggReadReg(LM75A_REG_ADDR_TEMPERATURE, temp, 2 );
         if (success)
         {
+        #if defined(MOVE_RIGHT5_EGG)
             t = BUILD_UINT16(temp[1], temp[0]);
             t = t >> 5;
             *p = HI_UINT16( t );
             *(p+1) = LO_UINT16( t );
-            //*p = temp[0];
-            //*(p+1) = temp[1];
+        #else
+            *p = temp[0];
+            *(p+1) = temp[1];
+        #endif
         }
         p += 2;
         EggTurnOffLM75A();
@@ -327,13 +327,6 @@ int8 EggReadAllLM75ATemp(uint8 *pBuf)
 bool EggSensorReadReg(uint8 addr, uint8 *pBuf, uint8 nBytes)
 {
   uint8 i = 0;
-
-  /* Send address we're reading from */
-  if (HalI2CWrite(1,&addr) == 1)
-  {
-    /* Now read data */
-    i = HalI2CRead(nBytes,pBuf);
-  }
 
   return i == nBytes;
 }
@@ -443,12 +436,9 @@ static bool EggReadReg(uint8 addr, uint8 *pBuf, uint8 nBytes)
      I2C_DUMMY_DELAY;
      ack = GET_SDA_VALUE; // read ack when HIGH period of the SCL
      PULL_SCL_LOW;
-     //SET_SDA_OUTPUT;
 
      // To read
-    //int16 i;
     uint32 dataCache = 0;
-
     SET_SDA_INPUT;
 
     // receive 8bits data
@@ -515,22 +505,7 @@ static bool EggReadReg(uint8 addr, uint8 *pBuf, uint8 nBytes)
 static bool EggSensorWriteReg(uint8 addr, uint8 *pBuf, uint8 nBytes)
 {
   uint8 i;
-  uint8 *p = buffer;
-
-  /* Copy address and data to local buffer for burst write */
-  *p++ = addr;
-  for (i = 0; i < nBytes; i++)
-  {
-    *p++ = *pBuf++;
-  }
-  nBytes++;
-
-  /* Send address and data */
-  i = HalI2CWrite(nBytes, buffer);
-  if ( i!= nBytes)
-  {
-
-  }
+  
   return (i == nBytes);
 }
 
