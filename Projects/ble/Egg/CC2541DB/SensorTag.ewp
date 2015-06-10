@@ -3227,13 +3227,19 @@
   <group>
     <name>APP</name>
     <file>
+      <name>$PROJ_DIR$\..\Source\i2c.c</name>
+    </file>
+    <file>
+      <name>$PROJ_DIR$\..\Source\i2c.h</name>
+    </file>
+    <file>
       <name>$PROJ_DIR$\..\Source\OSAL_SensorTag.c</name>
     </file>
     <file>
       <name>$PROJ_DIR$\..\Source\SensorTag.c</name>
     </file>
     <file>
-      <name>$PROJ_DIR$\..\Source\SensorTag.h</name>
+      <name>$PROJ_DIR$\..\Source\sensorTag.h</name>
     </file>
     <file>
       <name>$PROJ_DIR$\..\Source\SensorTag_Main.c</name>

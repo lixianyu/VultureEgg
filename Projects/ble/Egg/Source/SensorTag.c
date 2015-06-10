@@ -99,6 +99,7 @@
 //#include "MPU6050.h"
 #include "MPU6050_6Axis_MotionApps20Egg.h"
 #include "OneWire.h"
+#include "i2c.h"
 
 /*********************************************************************
  * MACROS
@@ -860,13 +861,18 @@ uint16 SensorTag_ProcessEvent( uint8 task_id, uint16 events )
   //////////////////////////
   if (events & ST_LM75A_SENSOR_TEST_EVT)
   {
+    static bool bswitch = TRUE;
     uint8 lm75abuffer[16] = {0};
-//    HalLM75ATempTurnOn(1);
-    HalLM75ATempReadAll(lm75abuffer);
-//    HalLM75ATempRead(1, lm75abuffer);
+    //HalLM75ATempTurnOn(1);
+    //HalLM75ATempRead(1, lm75abuffer);
+    if (bswitch)
+        HalLM75ATempReadAll(lm75abuffer);
+    else
+        EggReadAllLM75ATemp(lm75abuffer);
+    //bswitch = !bswitch;
     osal_memcpy(advertData+7, lm75abuffer, sizeof(lm75abuffer));
     GAPRole_SetParameter( GAPROLE_ADVERT_DATA, sizeof( advertData ), advertData );
-    osal_start_timerEx( sensorTag_TaskID, ST_LM75A_SENSOR_TEST_EVT, 6000 );
+    osal_start_timerEx( sensorTag_TaskID, ST_LM75A_SENSOR_TEST_EVT, 4000 );
     return (events ^ ST_LM75A_SENSOR_TEST_EVT);
   }
   
@@ -889,8 +895,8 @@ uint16 SensorTag_ProcessEvent( uint8 task_id, uint16 events )
     gsendbuffer[3+sizeof(lm75abuffer)] = 0x0D;
     gsendbuffer[3+sizeof(lm75abuffer)+1] = 0x0A;
     eggSerialAppSendNoti(gsendbuffer, 11);
-    //ST_HAL_DELAY(625);
-    ST_HAL_DELAY(1000);
+    //ST_HAL_DELAY(625); //Delay 5ms
+    ST_HAL_DELAY(1000); //Delay 8ms
     eggSerialAppSendNoti(gsendbuffer+11, 10);
     gEggState = EGG_STATE_MEASURE_IDLE;
     return (events ^ ST_LM75A_SENSOR_EVT);
