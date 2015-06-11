@@ -280,6 +280,7 @@ static bool   ds18b20Enabled = FALSE;
 static bool   barEnabled = FALSE;
 static bool   humiEnabled = FALSE;
 static bool   gyroEnabled = FALSE;
+static bool   lm75Enabled = FALSE;
 
 static uint8 gsendbuffer[36];
 static uint8 gsendbufferI;
@@ -301,7 +302,7 @@ static bool   sysResetRequest = FALSE;
 static uint16 sensorMagPeriod = MAG_DEFAULT_PERIOD;
 static uint16 sensorAccPeriod = ACC_DEFAULT_PERIOD;
 static uint16 sensorTmpPeriod = TEMP_DEFAULT_PERIOD;
-static uint16 sensorHumPeriod = HUM_DEFAULT_PERIOD;
+static uint32 sensorHumPeriod = HUM_DEFAULT_PERIOD;
 static uint16 sensorBarPeriod = BAR_DEFAULT_PERIOD;
 static uint16 sensorGyrPeriod = GYRO_DEFAULT_PERIOD;
 static uint16 sensorMpu6050Period = MPU6050_DEFAULT_PERIOD;
@@ -863,6 +864,7 @@ uint16 SensorTag_ProcessEvent( uint8 task_id, uint16 events )
   //////////////////////////
   if (events & ST_LM75A_SENSOR_GPIO_EVT)
   {
+    if (!lm75Enabled) return (events ^ ST_LM75A_SENSOR_GPIO_EVT);
     uint8 lm75abuffer[16] = {0};
     //HalLM75ATempTurnOn(1);
     //HalLM75ATempRead(1, lm75abuffer);
@@ -891,6 +893,7 @@ uint16 SensorTag_ProcessEvent( uint8 task_id, uint16 events )
   
   if ( events & ST_LM75A_SENSOR_EVT )
   {
+    if (!lm75Enabled) return (events ^ ST_LM75A_SENSOR_EVT);
     if (gEggState == EGG_STATE_MEASURE_HUMIDITY ||
         gEggState == EGG_STATE_MEASURE_MPU6050)
     {   //Try again after 1500ms.
@@ -1273,6 +1276,10 @@ static void resetSensorSetup (void)
     barEnabled = FALSE;
   }
 */
+  if (lm75Enabled)
+  {
+    lm75Enabled = FALSE;
+  }
   if (humiEnabled)
   {
     HalHumiInit();
@@ -2226,7 +2233,11 @@ static void mpu6050ChangeCB( uint8 paramID )
 
 static void lm75aStarWhenConnected(void)
 {
-    osal_start_timerEx( sensorTag_TaskID, ST_LM75A_SENSOR_EVT, 3999 );
+    if (!lm75Enabled)
+    {
+        lm75Enabled = TRUE;
+        osal_start_timerEx( sensorTag_TaskID, ST_LM75A_SENSOR_EVT, 6999 );
+    }
 }
 
 static void ds18b20StarWhenConnected(void)
