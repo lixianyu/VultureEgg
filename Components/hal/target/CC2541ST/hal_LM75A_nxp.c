@@ -239,8 +239,8 @@ int8 HalLM75ATempReadAll(uint8 *pBuf)
             *p = HI_UINT16( t );
             *(p+1) = LO_UINT16( t );
         #else
-            *p = temp[0];
-            *(p + 1) = temp[1];
+            *p = temp[1];
+            *(p + 1) = temp[0];
         #endif
         }
         p += 2;

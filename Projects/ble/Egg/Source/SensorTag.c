@@ -875,16 +875,16 @@ uint16 SensorTag_ProcessEvent( uint8 task_id, uint16 events )
     //osal_start_timerEx( sensorTag_TaskID, ST_LM75A_SENSOR_GPIO_EVT, 4000 );
     #if 1
     osal_memset(gsendbuffer, 0xFF, sizeof(gsendbuffer));
-    gsendbuffer[0] = 0xAA; // 0
-    gsendbuffer[1] = 0xBB;
-    gsendbuffer[2] = 0xBB; // 2
-    osal_memcpy(gsendbuffer+3, lm75abuffer, sizeof(lm75abuffer));
-    gsendbuffer[3+sizeof(lm75abuffer)] = 0x0D;
-    gsendbuffer[3+sizeof(lm75abuffer)+1] = 0x0A;
+    //gsendbuffer[0] = 0xAA; // 0
+    //gsendbuffer[1] = 0xBB;
+    //gsendbuffer[2] = 0xBB; // 2
+    osal_memcpy(gsendbuffer, lm75abuffer, sizeof(lm75abuffer));
+    gsendbuffer[sizeof(lm75abuffer)] = 0x0D;
+    gsendbuffer[sizeof(lm75abuffer)+1] = 0x0A;
     eggSerialAppSendNoti(gsendbuffer, 11);
     //ST_HAL_DELAY(625); //Delay 5ms
     ST_HAL_DELAY(1001); //Delay 8ms
-    eggSerialAppSendNoti(gsendbuffer+11, 10);
+    eggSerialAppSendNoti(gsendbuffer+11, 7);
     gEggState = EGG_STATE_MEASURE_IDLE;
     osal_start_timerEx( sensorTag_TaskID, ST_LM75A_SENSOR_EVT, 60000 );
     #endif
@@ -908,14 +908,14 @@ uint16 SensorTag_ProcessEvent( uint8 task_id, uint16 events )
     gsendbuffer[1] = 0xBB;
     gsendbuffer[2] = 0xBB; // 2
     osal_memcpy(gsendbuffer+3, lm75abuffer, sizeof(lm75abuffer));
-    gsendbuffer[3+sizeof(lm75abuffer)] = 0x0D;
-    gsendbuffer[3+sizeof(lm75abuffer)+1] = 0x0A;
+    //gsendbuffer[3+sizeof(lm75abuffer)] = 0x0D;
+    //gsendbuffer[3+sizeof(lm75abuffer)+1] = 0x0A;
     eggSerialAppSendNoti(gsendbuffer, 11);
     //ST_HAL_DELAY(625); //Delay 5ms
     ST_HAL_DELAY(1000); //Delay 8ms
-    eggSerialAppSendNoti(gsendbuffer+11, 10);
+    eggSerialAppSendNoti(gsendbuffer+11, 8);
     //gEggState = EGG_STATE_MEASURE_IDLE;
-    osal_start_timerEx( sensorTag_TaskID, ST_LM75A_SENSOR_GPIO_EVT, 400 );
+    osal_start_timerEx( sensorTag_TaskID, ST_LM75A_SENSOR_GPIO_EVT, 100 );
     return (events ^ ST_LM75A_SENSOR_EVT);
   }
   
