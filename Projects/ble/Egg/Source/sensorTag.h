@@ -55,7 +55,7 @@ extern "C"
 
 // Sensor Tag Task Events
 #define ST_START_DEVICE_EVT                              0x0001
-#define ST_IRTEMPERATURE_READ_EVT                        0x0002
+#define ST_SERIAL_SEND_NOTI_EVT                          0x0002
 #define ST_ACCELEROMETER_SENSOR_EVT                      0x0004
 #define ST_HUMIDITY_SENSOR_EVT                           0x0008
 #define ST_MAGNETOMETER_SENSOR_EVT                       0x0010

@@ -280,6 +280,51 @@ static void EggTurnOffLM75A(void)
      I2C_Stop();
 }
 
+bool EggLM75ATempRead(uint8 id, uint8 *pBuf)
+{
+  uint16 t = 0;
+  bool success;
+  uint8 temp[2] = {0};
+/*
+  if (irtSensorState != LM75A_NORMAL)
+  {
+    return FALSE;
+  }
+*/
+  EggLM75ATempSelect(id);
+  //HalSensorWriteReg(LM75A_REG_ADDR_CONFIG, configLM75AOn, 1);
+  EggTurnOnLM75A();
+  ST_HAL_DELAY(12500);
+  // Read the sensor registers
+
+  //success = HalSensorReadReg(LM75A_REG_ADDR_TEMPERATURE, temp, 2 );
+  success = EggReadReg(LM75A_REG_ADDR_TEMPERATURE, temp, 2 );
+  if (success)
+  {
+    // Store values
+#if defined(MOVE_RIGHT5)
+    t = BUILD_UINT16(temp[1], temp[0]);
+    t = t >> 5;
+    pBuf[0] = HI_UINT16( t );
+    pBuf[1] = LO_UINT16( t );
+#else
+    pBuf[0] = temp[1];
+    pBuf[1] = temp[0];
+#endif
+  }
+
+  // Turn off sensor
+  /*
+  if (HalSensorWriteReg(LM75A_REG_ADDR_CONFIG, configLM75AOff, 1))
+  {
+    irtSensorState = LM75A_OFF;
+  }
+  */
+  EggTurnOffLM75A();
+  //HalDcDcControl(ST_IRTEMP,false);
+
+  return success;
+}
 int8 EggReadAllLM75ATemp(uint8 *pBuf)
 {
     uint16 t = 0;

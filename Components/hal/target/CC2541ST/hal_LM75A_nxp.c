@@ -116,7 +116,7 @@ static uint8 configLM75AOn[1] =  {0x00};    // LM75A normal
  **************************************************************************************************/
 void HALLM75ATempInit(void)
 {
-  irtSensorState = LM75A_OFF;
+  irtSensorState = LM75A_NORMAL;
   for (int i = 0; i < LM75A_NUMBER; i++)
   {
     HalLM75ATempTurnOff(i);
@@ -174,13 +174,15 @@ bool HalLM75ATempRead(uint8 id, uint8 *pBuf)
   uint16 t = 0;
   bool success;
   uint8 temp[2] = {0};
+/*
   if (irtSensorState != LM75A_NORMAL)
   {
     return FALSE;
   }
-
+*/
   HalLM75ATempSelect(id);
-
+  HalSensorWriteReg(LM75A_REG_ADDR_CONFIG, configLM75AOn, 1);
+  ST_HAL_DELAY(12500);
   // Read the sensor registers
 
   success = HalSensorReadReg(LM75A_REG_ADDR_TEMPERATURE, temp, 2 );
@@ -194,8 +196,8 @@ bool HalLM75ATempRead(uint8 id, uint8 *pBuf)
     pBuf[0] = HI_UINT16( t );
     pBuf[1] = LO_UINT16( t );
 #else
-    pBuf[0] = temp[0];
-    pBuf[1] = temp[1];
+    pBuf[0] = temp[1];
+    pBuf[1] = temp[0];
 #endif
   }
 
@@ -338,35 +340,35 @@ static void HalLM75ATempSelect(uint8 id)
             break;
 
         case 1:
-            HalI2CInit(LM75A_I2C_ADDRESS1, i2cClock_267KHZ);
+            HalI2CInit(LM75A_I2C_ADDRESS1, i2cClock_533KHZ);
             break;
 
         case 2:
-            HalI2CInit(LM75A_I2C_ADDRESS2, i2cClock_267KHZ);
+            HalI2CInit(LM75A_I2C_ADDRESS2, i2cClock_533KHZ);
             break;
 
         case 3:
-            HalI2CInit(LM75A_I2C_ADDRESS3, i2cClock_267KHZ);
+            HalI2CInit(LM75A_I2C_ADDRESS3, i2cClock_533KHZ);
             break;
 
         case 4:
-            HalI2CInit(LM75A_I2C_ADDRESS4, i2cClock_267KHZ);
+            HalI2CInit(LM75A_I2C_ADDRESS4, i2cClock_533KHZ);
             break;
 
         case 5:
-            HalI2CInit(LM75A_I2C_ADDRESS5, i2cClock_267KHZ);
+            HalI2CInit(LM75A_I2C_ADDRESS5, i2cClock_533KHZ);
             break;
 
         case 6:
-            HalI2CInit(LM75A_I2C_ADDRESS6, i2cClock_267KHZ);
+            HalI2CInit(LM75A_I2C_ADDRESS6, i2cClock_533KHZ);
             break;
 
         case 7:
-            HalI2CInit(LM75A_I2C_ADDRESS7, i2cClock_267KHZ);
+            HalI2CInit(LM75A_I2C_ADDRESS7, i2cClock_533KHZ);
             break;
 
         default:
-            HalI2CInit(LM75A_I2C_ADDRESS0, i2cClock_267KHZ);
+            HalI2CInit(LM75A_I2C_ADDRESS0, i2cClock_533KHZ);
             break;
     }
 }

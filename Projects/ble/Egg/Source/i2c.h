@@ -14,4 +14,5 @@
 // Function prototypes
 extern int8 EggReadAllLM75ATemp(uint8 *pBuf);
 extern void EggLM75ATempInit(void);
+extern bool EggLM75ATempRead(uint8 id, uint8 *pBuf);
 #endif

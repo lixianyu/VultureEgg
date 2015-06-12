@@ -282,7 +282,10 @@ static bool   humiEnabled = FALSE;
 static bool   gyroEnabled = FALSE;
 static bool   lm75Enabled = FALSE;
 
+static uint8 gsendLen = 0;
 static uint8 gsendbuffer[48];
+static uint8 gsendbuffer2[48];
+static uint8 gLM75ACounter = 0;
 static uint8 gsendbufferI;
 static int flagRom = 0;
 typedef enum
@@ -337,7 +340,7 @@ static void readDs18b20Data1( uint8* mData, uint8 flagrom);
 static void readDs18b20WithState(uint8 state, uint8 flagrom);
 static void readDs18b20WithState1(uint8 state, uint8 flagrom);
 static void barometerChangeCB( uint8 paramID );
-static void irTempChangeCB( uint8 paramID );
+//static void irTempChangeCB( uint8 paramID );
 static void accelChangeCB( uint8 paramID );
 static void mpu6050ChangeCB( uint8 paramID );
 static void ds18b20ChangeCB( uint8 paramID );
@@ -380,12 +383,12 @@ static sensorCBs_t sensorTag_BarometerCBs =
 {
   barometerChangeCB,        // Characteristic value change callback
 };
-
+#if 0
 static sensorCBs_t sensorTag_IrTempCBs =
 {
   irTempChangeCB,           // Characteristic value change callback
 };
-
+#endif
 static sensorCBs_t sensorTag_AccelCBs =
 {
   accelChangeCB,            // Characteristic value change callback
@@ -588,7 +591,7 @@ void SensorTag_Init( uint8 task_id )
   //IRTemp_AddService (GATT_ALL_SERVICES );         // IR Temperature Service
   //Accel_AddService (GATT_ALL_SERVICES );          // Accelerometer Service
   Mpu6050_AddService(GATT_ALL_SERVICES);
-  Ds18b20_AddService(GATT_ALL_SERVICES);
+  //Ds18b20_AddService(GATT_ALL_SERVICES);
   Humidity_AddService (GATT_ALL_SERVICES );       // Humidity Service
   //Magnetometer_AddService( GATT_ALL_SERVICES );   // Magnetometer Service
   //Barometer_AddService( GATT_ALL_SERVICES );      // Barometer Service
@@ -624,7 +627,7 @@ void SensorTag_Init( uint8 task_id )
   //VOID Magnetometer_RegisterAppCBs( &sensorTag_MagnetometerCBs );
   //VOID Accel_RegisterAppCBs( &sensorTag_AccelCBs );
   VOID Mpu6050_RegisterAppCBs(&sensorTag_Mpu6050CBs);
-  VOID Ds18b20_RegisterAppCBs(&sensorTag_Ds18b20CBs);
+  //VOID Ds18b20_RegisterAppCBs(&sensorTag_Ds18b20CBs);
   VOID Humidity_RegisterAppCBs( &sensorTag_HumidCBs );
   //VOID Barometer_RegisterAppCBs( &sensorTag_BarometerCBs );
   //VOID Gyro_RegisterAppCBs( &sensorTag_GyroCBs );
@@ -638,7 +641,7 @@ void SensorTag_Init( uint8 task_id )
   // Enable clock divide on halt
   // This reduces active current while radio is active and CC254x MCU
   // is halted
-  HCI_EXT_ClkDivOnHaltCmd( HCI_EXT_ENABLE_CLK_DIVIDE_ON_HALT );
+  //HCI_EXT_ClkDivOnHaltCmd( HCI_EXT_ENABLE_CLK_DIVIDE_ON_HALT );
 
   // Setup a delayed profile startup
   osal_set_event( sensorTag_TaskID, ST_START_DEVICE_EVT );
@@ -713,6 +716,7 @@ uint16 SensorTag_ProcessEvent( uint8 task_id, uint16 events )
   //////////////////////////
   //    IR TEMPERATURE    //
   //////////////////////////
+#if 0
   if ( events & ST_IRTEMPERATURE_READ_EVT )
   {
     if ( irTempEnabled )
@@ -738,7 +742,7 @@ uint16 SensorTag_ProcessEvent( uint8 task_id, uint16 events )
 
     return (events ^ ST_IRTEMPERATURE_READ_EVT);
   }
-
+#endif
   //////////////////////////
   //    Accelerometer     //
   //////////////////////////
@@ -771,7 +775,7 @@ uint16 SensorTag_ProcessEvent( uint8 task_id, uint16 events )
             osal_start_timerEx( sensorTag_TaskID, ST_MPU6050_SENSOR_EVT, 1000 );
             return (events ^ ST_MPU6050_SENSOR_EVT);
         }
-        
+
         gEggState = EGG_STATE_MEASURE_MPU6050;
         mpuIntStatus = HalMPU6050getIntStatus();
         fifoCount = HalMPU6050getFIFOCount();
@@ -784,7 +788,7 @@ uint16 SensorTag_ProcessEvent( uint8 task_id, uint16 events )
         }
         if (mpuIntStatus & 0x02)
         {
-            while (fifoCount < packetSize) 
+            while (fifoCount < packetSize)
             {
                 fifoCount = HalMPU6050getFIFOCount();
             }
@@ -862,35 +866,6 @@ uint16 SensorTag_ProcessEvent( uint8 task_id, uint16 events )
   //////////////////////////
   //    LM75A             //
   //////////////////////////
-  if (events & ST_LM75A_SENSOR_GPIO_EVT)
-  {
-    if (!lm75Enabled) return (events ^ ST_LM75A_SENSOR_GPIO_EVT);
-    uint8 lm75abuffer[16] = {0};
-    //HalLM75ATempTurnOn(1);
-    //HalLM75ATempRead(1, lm75abuffer);
-    EggReadAllLM75ATemp(lm75abuffer);
-    //HalLM75ATempReadAll(lm75abuffer);
-    //osal_memcpy(advertData+7, lm75abuffer, sizeof(lm75abuffer));
-    //GAPRole_SetParameter( GAPROLE_ADVERT_DATA, sizeof( advertData ), advertData );
-    //osal_start_timerEx( sensorTag_TaskID, ST_LM75A_SENSOR_GPIO_EVT, 4000 );
-    #if 1
-    osal_memset(gsendbuffer, 0xFF, sizeof(gsendbuffer));
-    //gsendbuffer[0] = 0xAA; // 0
-    //gsendbuffer[1] = 0xBB;
-    //gsendbuffer[2] = 0xBB; // 2
-    osal_memcpy(gsendbuffer, lm75abuffer, sizeof(lm75abuffer));
-    gsendbuffer[sizeof(lm75abuffer)] = 0x0D;
-    gsendbuffer[sizeof(lm75abuffer)+1] = 0x0A;
-    eggSerialAppSendNoti(gsendbuffer, 18);
-    //ST_HAL_DELAY(625); //Delay 5ms
-//    ST_HAL_DELAY(1001); //Delay 8ms
-//    eggSerialAppSendNoti(gsendbuffer+11, 7);
-    gEggState = EGG_STATE_MEASURE_IDLE;
-    osal_start_timerEx( sensorTag_TaskID, ST_LM75A_SENSOR_EVT, 60000 );
-    #endif
-    return (events ^ ST_LM75A_SENSOR_GPIO_EVT);
-  }
-  
   if ( events & ST_LM75A_SENSOR_EVT )
   {
     if (!lm75Enabled) return (events ^ ST_LM75A_SENSOR_EVT);
@@ -901,30 +876,82 @@ uint16 SensorTag_ProcessEvent( uint8 task_id, uint16 events )
         return (events ^ ST_LM75A_SENSOR_EVT);
     }
     gEggState = EGG_STATE_MEASURE_LM75A;
-    uint8 lm75abuffer[16] = {0};
-    HalLM75ATempReadAll(lm75abuffer);
-    osal_memset(gsendbuffer, 0xFF, sizeof(gsendbuffer));
-    gsendbuffer[0] = 0xAA; // 0
-    gsendbuffer[1] = 0xBB;
-    gsendbuffer[2] = 0xBB; // 2
-    osal_memcpy(gsendbuffer+3, lm75abuffer, sizeof(lm75abuffer));
-    EggReadAllLM75ATemp(lm75abuffer);
-    osal_memcpy(gsendbuffer+19, lm75abuffer, sizeof(lm75abuffer));
-    gsendbuffer[35] = 0x0D;
-    gsendbuffer[36] = 0x0A;
-    //gsendbuffer[3+sizeof(lm75abuffer)] = 0x0D;
-    //gsendbuffer[3+sizeof(lm75abuffer)+1] = 0x0A;
-    eggSerialAppSendNoti(gsendbuffer, 20);
-    //ST_HAL_DELAY(625); //Delay 5ms
-    ST_HAL_DELAY(1000); //Delay 8ms
-    eggSerialAppSendNoti(gsendbuffer+20, 17);
-    //eggSerialAppSendNoti(gsendbuffer+11, 8);
-    //gEggState = EGG_STATE_MEASURE_IDLE;
-    //osal_start_timerEx( sensorTag_TaskID, ST_LM75A_SENSOR_GPIO_EVT, 8 );
-    osal_start_timerEx( sensorTag_TaskID, ST_LM75A_SENSOR_EVT, 60000 );
+    uint8 lm75abuffer[2];
+    HalLM75ATempRead(gLM75ACounter++, lm75abuffer);
+    if (gsendbufferI == 0)
+    {
+        osal_memset(gsendbuffer, 0xFF, sizeof(gsendbuffer));
+        gsendbuffer[0] = 0xAA; // 0
+        gsendbuffer[1] = 0xBB;
+        gsendbuffer[2] = 0xBB; // 2
+        gsendbufferI += 3;
+    }
+    gsendbuffer[gsendbufferI++] = lm75abuffer[0];
+    gsendbuffer[gsendbufferI++] = lm75abuffer[1];
+    if (gLM75ACounter >= 8)
+    {
+        gsendbuffer[gsendbufferI++] = 0x0D;
+        gsendbuffer[gsendbufferI++] = 0x0A;
+        eggSerialAppSendNoti(gsendbuffer, 11);
+        ST_HAL_DELAY(1000); //Delay 8ms
+        eggSerialAppSendNoti(gsendbuffer+11, 10);
+        gLM75ACounter = 0;
+        gsendbufferI = 0;
+        //gEggState = EGG_STATE_MEASURE_IDLE;
+        osal_start_timerEx( sensorTag_TaskID, ST_LM75A_SENSOR_GPIO_EVT, 2000 );
+    }
+    else
+    {
+        osal_start_timerEx( sensorTag_TaskID, ST_LM75A_SENSOR_EVT, 101 );
+    }
     return (events ^ ST_LM75A_SENSOR_EVT);
   }
+
+  if (events & ST_LM75A_SENSOR_GPIO_EVT)
+  {
+    if (!lm75Enabled) return (events ^ ST_LM75A_SENSOR_GPIO_EVT);
+    if (gEggState == EGG_STATE_MEASURE_HUMIDITY ||
+        gEggState == EGG_STATE_MEASURE_MPU6050)
+    {   //Try again after 1500ms.
+        osal_start_timerEx( sensorTag_TaskID, ST_LM75A_SENSOR_GPIO_EVT, 1500 );
+        return (events ^ ST_LM75A_SENSOR_GPIO_EVT);
+    }
+    uint8 lm75abuffer[2] = {0};
+    EggLM75ATempRead(gLM75ACounter++, lm75abuffer);
+    if (gsendbufferI == 0)
+    {
+        osal_memset(gsendbuffer2, 0xFF, sizeof(gsendbuffer2));
+        gsendbuffer2[0] = 0xAA; // 0
+        gsendbuffer2[1] = 0xBB;
+        gsendbuffer2[2] = 0xBC; // 2
+        gsendbufferI += 3;
+    }
+    gsendbuffer2[gsendbufferI++] = lm75abuffer[0];
+    gsendbuffer2[gsendbufferI++] = lm75abuffer[1];
+    if (gLM75ACounter >= 8)
+    {
+        gsendbuffer2[gsendbufferI++] = 0x0D;
+        gsendbuffer2[gsendbufferI++] = 0x0A;
+        eggSerialAppSendNoti(gsendbuffer2, 11);
+        ST_HAL_DELAY(1000); //Delay 8ms
+        eggSerialAppSendNoti(gsendbuffer2+11, 10);
+        gLM75ACounter = 0;
+        gsendbufferI = 0;
+        gEggState = EGG_STATE_MEASURE_IDLE;
+        osal_start_timerEx( sensorTag_TaskID, ST_LM75A_SENSOR_EVT, 20000 );
+    }
+    else
+    {
+        osal_start_timerEx( sensorTag_TaskID, ST_LM75A_SENSOR_GPIO_EVT, 101 );
+    }
+    return (events ^ ST_LM75A_SENSOR_GPIO_EVT);
+  }
   
+  if (events & ST_SERIAL_SEND_NOTI_EVT)
+  {
+    eggSerialAppSendNoti(gsendbuffer, gsendLen);
+    return (events ^ ST_SERIAL_SEND_NOTI_EVT);
+  }
   //////////////////////////
   //      Humidity        //
   //////////////////////////
@@ -1371,7 +1398,7 @@ static void peripheralStateNotificationCB( gaprole_States_t newState )
     case GAPROLE_CONNECTED:
         // Set timer to update connection parameters
         // 5 seconds should allow enough time for Service Discovery by the collector to finish
-        osal_start_timerEx( sensorTag_TaskID, ST_CONN_PARAM_UPDATE_EVT, 6000);
+        //osal_start_timerEx( sensorTag_TaskID, ST_CONN_PARAM_UPDATE_EVT, 5000);
         HalLedSet(HAL_LED_1, HAL_LED_MODE_OFF );
         gEggState = EGG_STATE_MEASURE_IDLE;
         //mpu6050StarWhenConnected();
@@ -1481,7 +1508,7 @@ static void readMPU6050DmpData( uint8 *packet )
     HalMPU6050getAcceleration(&ax, &ay, &az);
     HalMPU6050dmpGetQuaternion(qI, packet);
 //    float w = (float)qI[0] / 16384.0f;
-        
+
     buffers[1] = ax >> 8;
     buffers[0] = ax & 0xFF;
     buffers[3] = ay >> 8;
@@ -2094,6 +2121,7 @@ static void barometerChangeCB( uint8 paramID )
  *
  * @return  none
  */
+#if 0
 static void irTempChangeCB( uint8 paramID )
 {
   uint8 newValue;
@@ -2131,6 +2159,7 @@ static void irTempChangeCB( uint8 paramID )
     break;
   }
 }
+#endif
 
 /*********************************************************************
  * @fn      accelChangeCB
@@ -2242,7 +2271,9 @@ static void lm75aStarWhenConnected(void)
     if (!lm75Enabled)
     {
         lm75Enabled = TRUE;
-        osal_start_timerEx( sensorTag_TaskID, ST_LM75A_SENSOR_EVT, 6999 );
+        gsendbufferI = 0;
+        gLM75ACounter = 0;
+        osal_start_timerEx( sensorTag_TaskID, ST_LM75A_SENSOR_EVT, 5000 );
     }
 }
 

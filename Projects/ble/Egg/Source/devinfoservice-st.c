@@ -165,7 +165,7 @@ static const uint8 devInfoSoftwareRev[] = "1.4.0";
 
 // Firmware Revision String characteristic
 static uint8 devInfoFirmwareRevProps = GATT_PROP_READ;
-static const uint8 devInfoFirmwareRev[] = "0.0.903";
+static const uint8 devInfoFirmwareRev[] = "0.1.612";
 
 // Hardware Revision String characteristic
 static uint8 devInfoHardwareRevProps = GATT_PROP_READ;

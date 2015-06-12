@@ -633,6 +633,35 @@ void DS18B20_Write(unsigned char cmd, uint8 power)
     }
 }
 
+void MyDS18B20_Write(unsigned char cmd, uint8 power)
+{
+    unsigned char i;
+    SET_OUT();                  //设置IO为输出，2530->DS18B20
+    
+    /*每次一位，循环8次*/
+    for(i=0; i<8; i++)
+    {
+        CL_DQ();              //IO为低    
+        if( cmd & (1<<i) )    //写数据从低位开始
+        {
+          delay_nus(1); // recovery time must be a minimum of 1us
+          SET_DQ();           //IO输入高电平
+          delay_nus(65);
+        }
+        else
+        {
+          CL_DQ();            //IO输出低电平
+          delay_nus(65);        //Must be a minimum of 60us
+          SET_DQ();             //IO口拉高
+          delay_nus(1); // recovery time must be a minimum of 1us
+        }
+    }
+    SET_DQ();                 //IO口拉高
+    if ( !power) {
+	    SET_IN();
+	    CL_DQ();
+    }
+}
 
 /*
  *    读数据函数
@@ -668,6 +697,40 @@ unsigned char DS18B20_Read(void)
         delay_nus(70);      //保持60~120us
         SET_OUT();          //设置IO方向为输出 CC2540->DS18B20
 
+    }
+    return (rdData);        //返回读出的数据
+}
+
+unsigned char MyDS18B20_Read(void)
+{
+    unsigned char rdData;     //读出的数据
+    unsigned char i, dat;     //临时变量
+    
+    rdData = 0;               //读出的数据初始化为0     
+    
+    /* 每次读一位，读8次 */
+    for(i=0; i<8; i++)
+    {
+        CL_DQ();            //IO拉低
+        delay_nus(3);
+        //SET_DQ();           //IO拉高
+        SET_IN();           //设置IO方向为输入 DS18B20->CC2540
+        delay_nus(11);
+        dat = DQ;           //读数据,从低位开始
+        
+        if(dat)
+        {
+          rdData |= (1<<i); //如果读出的数据位为正
+        }
+        else
+        {
+          rdData &= ~(1<<i);//如果读出的数据位为负
+        }
+        
+        delay_nus(50);      //保持60~120us
+        SET_OUT();          //设置IO方向为输出 CC2540->DS18B20
+        SET_DQ();
+        delay_nus(1);
     }
     return (rdData);        //返回读出的数据
 }
