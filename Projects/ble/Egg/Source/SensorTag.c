@@ -282,7 +282,7 @@ static bool   humiEnabled = FALSE;
 static bool   gyroEnabled = FALSE;
 static bool   lm75Enabled = FALSE;
 
-static uint8 gsendbuffer[36];
+static uint8 gsendbuffer[48];
 static uint8 gsendbufferI;
 static int flagRom = 0;
 typedef enum
@@ -908,14 +908,20 @@ uint16 SensorTag_ProcessEvent( uint8 task_id, uint16 events )
     gsendbuffer[1] = 0xBB;
     gsendbuffer[2] = 0xBB; // 2
     osal_memcpy(gsendbuffer+3, lm75abuffer, sizeof(lm75abuffer));
+    EggReadAllLM75ATemp(lm75abuffer);
+    osal_memcpy(gsendbuffer+19, lm75abuffer, sizeof(lm75abuffer));
+    gsendbuffer[35] = 0x0D;
+    gsendbuffer[36] = 0x0A;
     //gsendbuffer[3+sizeof(lm75abuffer)] = 0x0D;
     //gsendbuffer[3+sizeof(lm75abuffer)+1] = 0x0A;
-    eggSerialAppSendNoti(gsendbuffer, 11);
+    eggSerialAppSendNoti(gsendbuffer, 20);
     //ST_HAL_DELAY(625); //Delay 5ms
     ST_HAL_DELAY(1000); //Delay 8ms
-    eggSerialAppSendNoti(gsendbuffer+11, 8);
+    eggSerialAppSendNoti(gsendbuffer+20, 17);
+    //eggSerialAppSendNoti(gsendbuffer+11, 8);
     //gEggState = EGG_STATE_MEASURE_IDLE;
-    osal_start_timerEx( sensorTag_TaskID, ST_LM75A_SENSOR_GPIO_EVT, 8 );
+    //osal_start_timerEx( sensorTag_TaskID, ST_LM75A_SENSOR_GPIO_EVT, 8 );
+    osal_start_timerEx( sensorTag_TaskID, ST_LM75A_SENSOR_EVT, 60000 );
     return (events ^ ST_LM75A_SENSOR_EVT);
   }
   
