@@ -890,15 +890,15 @@ uint16 SensorTag_ProcessEvent( uint8 task_id, uint16 events )
     gsendbuffer[gsendbufferI++] = lm75abuffer[1];
     if (gLM75ACounter >= 8)
     {
-        gsendbuffer[gsendbufferI++] = 0x0D;
-        gsendbuffer[gsendbufferI++] = 0x0A;
-        eggSerialAppSendNoti(gsendbuffer, 11);
-        ST_HAL_DELAY(1000); //Delay 8ms
-        eggSerialAppSendNoti(gsendbuffer+11, 10);
+        //gsendbuffer[gsendbufferI++] = 0x0D;
+        //gsendbuffer[gsendbufferI++] = 0x0A;
+        //eggSerialAppSendNoti(gsendbuffer, 11);
+        //ST_HAL_DELAY(1000); //Delay 8ms
+        //eggSerialAppSendNoti(gsendbuffer+11, 10);
         gLM75ACounter = 0;
-        gsendbufferI = 0;
+        //gsendbufferI = 0;
         //gEggState = EGG_STATE_MEASURE_IDLE;
-        osal_start_timerEx( sensorTag_TaskID, ST_LM75A_SENSOR_GPIO_EVT, 2000 );
+        osal_start_timerEx( sensorTag_TaskID, ST_LM75A_SENSOR_GPIO_EVT, 200 );
     }
     else
     {
@@ -918,6 +918,7 @@ uint16 SensorTag_ProcessEvent( uint8 task_id, uint16 events )
     }
     uint8 lm75abuffer[2] = {0};
     EggLM75ATempRead(gLM75ACounter++, lm75abuffer);
+    #if 0
     if (gsendbufferI == 0)
     {
         osal_memset(gsendbuffer2, 0xFF, sizeof(gsendbuffer2));
@@ -926,15 +927,16 @@ uint16 SensorTag_ProcessEvent( uint8 task_id, uint16 events )
         gsendbuffer2[2] = 0xBC; // 2
         gsendbufferI += 3;
     }
-    gsendbuffer2[gsendbufferI++] = lm75abuffer[0];
-    gsendbuffer2[gsendbufferI++] = lm75abuffer[1];
+    #endif
+    gsendbuffer[gsendbufferI++] = lm75abuffer[0];
+    gsendbuffer[gsendbufferI++] = lm75abuffer[1];
     if (gLM75ACounter >= 8)
     {
-        gsendbuffer2[gsendbufferI++] = 0x0D;
-        gsendbuffer2[gsendbufferI++] = 0x0A;
-        eggSerialAppSendNoti(gsendbuffer2, 11);
+        gsendbuffer[gsendbufferI++] = 0x0D;
+        gsendbuffer[gsendbufferI++] = 0x0A;
+        eggSerialAppSendNoti(gsendbuffer, 19);
         ST_HAL_DELAY(1000); //Delay 8ms
-        eggSerialAppSendNoti(gsendbuffer2+11, 10);
+        eggSerialAppSendNoti(gsendbuffer+19, 18);
         gLM75ACounter = 0;
         gsendbufferI = 0;
         gEggState = EGG_STATE_MEASURE_IDLE;
