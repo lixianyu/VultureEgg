@@ -19,9 +19,9 @@
 #define SET_SCL_FN_0  (P0SEL &= 0xFD)
 
 // Port Direction,  0: Input,  1: Output
-  //P0DIR = 0xFF;
-  //P1DIR = 0xFF;
-  //P2DIR = 0x1F;
+//P0DIR = 0xFF;
+//P1DIR = 0xFF;
+//P2DIR = 0x1F;
 #define SET_SDA_OUTPUT  (P0DIR |= 0x10)
 #define SET_SDA_INPUT   (P0DIR &= 0xEF)
 #define SET_SCL_OUTPUT  (P0DIR |= 0x02)
@@ -77,11 +77,11 @@ static void EggTurnOffLM75A(void);
 
 void EggLM75ATempInit(void)
 {
-  for (int i = 0; i < LM75A_NUMBER; i++)
-  {
-    EggLM75ATempSelect(i);
-    EggTurnOffLM75A();
-  }
+    for (int i = 0; i < LM75A_NUMBER; i++)
+    {
+        EggLM75ATempSelect(i);
+        EggTurnOffLM75A();
+    }
 }
 
 void EggTurnOnLM75A(void)
@@ -100,86 +100,86 @@ void EggTurnOnLM75A(void)
     PULL_SCL_LOW;
     I2C_DUMMY_DELAY;
 
-    data = gI2CAddress<<1;
+    data = gI2CAddress << 1;
     // send 8bits data, MSB first
-     for (i = 8; --i >= 0; )
-     {
-          if ((data>>i) & 0x01)
-          {
-             PULL_SDA_HIGH;
-          }
-          else
-          {
-             PULL_SDA_LOW;
-          }
-          I2C_DUMMY_DELAY;
-          PULL_SCL_HIGH;
-          I2C_DUMMY_DELAY;
-          PULL_SCL_LOW;
-          I2C_DUMMY_DELAY;
+    for (i = 8; --i >= 0; )
+    {
+        if ((data >> i) & 0x01)
+        {
+            PULL_SDA_HIGH;
+        }
+        else
+        {
+            PULL_SDA_LOW;
+        }
+        I2C_DUMMY_DELAY;
+        PULL_SCL_HIGH;
+        I2C_DUMMY_DELAY;
+        PULL_SCL_LOW;
+        I2C_DUMMY_DELAY;
     }
 
-     // receive ack
-     SET_SDA_INPUT;
-     PULL_SCL_HIGH;
-     I2C_DUMMY_DELAY;
-     ack = GET_SDA_VALUE; // read ack when HIGH period of the SCL
-     PULL_SCL_LOW;
-     SET_SDA_OUTPUT;
+    // receive ack
+    SET_SDA_INPUT;
+    PULL_SCL_HIGH;
+    I2C_DUMMY_DELAY;
+    ack = GET_SDA_VALUE; // read ack when HIGH period of the SCL
+    PULL_SCL_LOW;
+    SET_SDA_OUTPUT;
 
-     data = LM75A_REG_ADDR_CONFIG;
-     // send 8bits data, MSB first
-     for (i = 8; --i >= 0; )
-     {
-          if ((data>>i) & 0x01)
-          {
-             PULL_SDA_HIGH;
-          }
-          else
-          {
-             PULL_SDA_LOW;
-          }
-          I2C_DUMMY_DELAY;
-          PULL_SCL_HIGH;
-          I2C_DUMMY_DELAY;
-          PULL_SCL_LOW;
-          I2C_DUMMY_DELAY;
+    data = LM75A_REG_ADDR_CONFIG;
+    // send 8bits data, MSB first
+    for (i = 8; --i >= 0; )
+    {
+        if ((data >> i) & 0x01)
+        {
+            PULL_SDA_HIGH;
+        }
+        else
+        {
+            PULL_SDA_LOW;
+        }
+        I2C_DUMMY_DELAY;
+        PULL_SCL_HIGH;
+        I2C_DUMMY_DELAY;
+        PULL_SCL_LOW;
+        I2C_DUMMY_DELAY;
     }
-     // receive ack
-     SET_SDA_INPUT;
-     PULL_SCL_HIGH;
-     I2C_DUMMY_DELAY;
-     ack = GET_SDA_VALUE; // read ack when HIGH period of the SCL
-     PULL_SCL_LOW;
-     SET_SDA_OUTPUT;
+    // receive ack
+    SET_SDA_INPUT;
+    PULL_SCL_HIGH;
+    I2C_DUMMY_DELAY;
+    ack = GET_SDA_VALUE; // read ack when HIGH period of the SCL
+    PULL_SCL_LOW;
+    SET_SDA_OUTPUT;
 
-     data = configLM75AOn[0];
-     // send 8bits data, MSB first
-     for (i = 8; --i >= 0; )
-     {
-          if ((data>>i) & 0x01)
-          {
-             PULL_SDA_HIGH;
-          }
-          else
-          {
-             PULL_SDA_LOW;
-          }
-          I2C_DUMMY_DELAY;
-          PULL_SCL_HIGH;
-          I2C_DUMMY_DELAY;
-          PULL_SCL_LOW;
-          I2C_DUMMY_DELAY;
+    data = configLM75AOn[0];
+    // send 8bits data, MSB first
+    for (i = 8; --i >= 0; )
+    {
+        if ((data >> i) & 0x01)
+        {
+            PULL_SDA_HIGH;
+        }
+        else
+        {
+            PULL_SDA_LOW;
+        }
+        I2C_DUMMY_DELAY;
+        PULL_SCL_HIGH;
+        I2C_DUMMY_DELAY;
+        PULL_SCL_LOW;
+        I2C_DUMMY_DELAY;
     }
-          // receive ack
-     SET_SDA_INPUT;
-     PULL_SCL_HIGH;
-     I2C_DUMMY_DELAY;
-     ack = GET_SDA_VALUE; // read ack when HIGH period of the SCL
-     PULL_SCL_LOW;
-     SET_SDA_OUTPUT;
+    // receive ack
+    SET_SDA_INPUT;
+    PULL_SCL_HIGH;
+    I2C_DUMMY_DELAY;
+    ack = GET_SDA_VALUE; // read ack when HIGH period of the SCL
+    PULL_SCL_LOW;
+    SET_SDA_OUTPUT;
 
-     I2C_Stop();
+    I2C_Stop();
 }
 
 static void EggTurnOffLM75A(void)
@@ -198,132 +198,132 @@ static void EggTurnOffLM75A(void)
     PULL_SCL_LOW;
     I2C_DUMMY_DELAY;
 
-    data = gI2CAddress<<1;
+    data = gI2CAddress << 1;
     // send 8bits data, MSB first
-     for (i = 8; --i >= 0; )
-     {
-          if ((data>>i) & 0x01)
-          {
-             PULL_SDA_HIGH;
-          }
-          else
-          {
-             PULL_SDA_LOW;
-          }
-          I2C_DUMMY_DELAY;
-          PULL_SCL_HIGH;
-          I2C_DUMMY_DELAY;
-          PULL_SCL_LOW;
-          I2C_DUMMY_DELAY;
+    for (i = 8; --i >= 0; )
+    {
+        if ((data >> i) & 0x01)
+        {
+            PULL_SDA_HIGH;
+        }
+        else
+        {
+            PULL_SDA_LOW;
+        }
+        I2C_DUMMY_DELAY;
+        PULL_SCL_HIGH;
+        I2C_DUMMY_DELAY;
+        PULL_SCL_LOW;
+        I2C_DUMMY_DELAY;
     }
 
-     // receive ack
-     SET_SDA_INPUT;
-     PULL_SCL_HIGH;
-     I2C_DUMMY_DELAY;
-     ack = GET_SDA_VALUE; // read ack when HIGH period of the SCL
-     PULL_SCL_LOW;
-     SET_SDA_OUTPUT;
+    // receive ack
+    SET_SDA_INPUT;
+    PULL_SCL_HIGH;
+    I2C_DUMMY_DELAY;
+    ack = GET_SDA_VALUE; // read ack when HIGH period of the SCL
+    PULL_SCL_LOW;
+    SET_SDA_OUTPUT;
 
-     data = LM75A_REG_ADDR_CONFIG;
-     // send 8bits data, MSB first
-     for (i = 8; --i >= 0; )
-     {
-          if ((data>>i) & 0x01)
-          {
-             PULL_SDA_HIGH;
-          }
-          else
-          {
-             PULL_SDA_LOW;
-          }
-          I2C_DUMMY_DELAY;
-          PULL_SCL_HIGH;
-          I2C_DUMMY_DELAY;
-          PULL_SCL_LOW;
-          I2C_DUMMY_DELAY;
+    data = LM75A_REG_ADDR_CONFIG;
+    // send 8bits data, MSB first
+    for (i = 8; --i >= 0; )
+    {
+        if ((data >> i) & 0x01)
+        {
+            PULL_SDA_HIGH;
+        }
+        else
+        {
+            PULL_SDA_LOW;
+        }
+        I2C_DUMMY_DELAY;
+        PULL_SCL_HIGH;
+        I2C_DUMMY_DELAY;
+        PULL_SCL_LOW;
+        I2C_DUMMY_DELAY;
     }
-     // receive ack
-     SET_SDA_INPUT;
-     PULL_SCL_HIGH;
-     I2C_DUMMY_DELAY;
-     ack = GET_SDA_VALUE; // read ack when HIGH period of the SCL
-     PULL_SCL_LOW;
-     SET_SDA_OUTPUT;
+    // receive ack
+    SET_SDA_INPUT;
+    PULL_SCL_HIGH;
+    I2C_DUMMY_DELAY;
+    ack = GET_SDA_VALUE; // read ack when HIGH period of the SCL
+    PULL_SCL_LOW;
+    SET_SDA_OUTPUT;
 
-     data = configLM75AOff[0];
-     // send 8bits data, MSB first
-     for (i = 8; --i >= 0; )
-     {
-          if ((data>>i) & 0x01)
-          {
-             PULL_SDA_HIGH;
-          }
-          else
-          {
-             PULL_SDA_LOW;
-          }
-          I2C_DUMMY_DELAY;
-          PULL_SCL_HIGH;
-          I2C_DUMMY_DELAY;
-          PULL_SCL_LOW;
-          I2C_DUMMY_DELAY;
+    data = configLM75AOff[0];
+    // send 8bits data, MSB first
+    for (i = 8; --i >= 0; )
+    {
+        if ((data >> i) & 0x01)
+        {
+            PULL_SDA_HIGH;
+        }
+        else
+        {
+            PULL_SDA_LOW;
+        }
+        I2C_DUMMY_DELAY;
+        PULL_SCL_HIGH;
+        I2C_DUMMY_DELAY;
+        PULL_SCL_LOW;
+        I2C_DUMMY_DELAY;
     }
-          // receive ack
-     SET_SDA_INPUT;
-     PULL_SCL_HIGH;
-     I2C_DUMMY_DELAY;
-     ack = GET_SDA_VALUE; // read ack when HIGH period of the SCL
-     PULL_SCL_LOW;
-     SET_SDA_OUTPUT;
+    // receive ack
+    SET_SDA_INPUT;
+    PULL_SCL_HIGH;
+    I2C_DUMMY_DELAY;
+    ack = GET_SDA_VALUE; // read ack when HIGH period of the SCL
+    PULL_SCL_LOW;
+    SET_SDA_OUTPUT;
 
-     I2C_Stop();
+    I2C_Stop();
 }
 
 bool EggLM75ATempRead(uint8 id, uint8 *pBuf)
 {
-  uint16 t = 0;
-  bool success;
-  uint8 temp[2] = {0};
-/*
-  if (irtSensorState != LM75A_NORMAL)
-  {
-    return FALSE;
-  }
-*/
-  EggLM75ATempSelect(id);
-  //HalSensorWriteReg(LM75A_REG_ADDR_CONFIG, configLM75AOn, 1);
-  EggTurnOnLM75A();
-  ST_HAL_DELAY(12500);
-  // Read the sensor registers
+    uint16 t = 0;
+    bool success;
+    uint8 temp[2] = {0};
+    /*
+      if (irtSensorState != LM75A_NORMAL)
+      {
+        return FALSE;
+      }
+    */
+    EggLM75ATempSelect(id);
+    //HalSensorWriteReg(LM75A_REG_ADDR_CONFIG, configLM75AOn, 1);
+    EggTurnOnLM75A();
+    ST_HAL_DELAY(12500);
+    // Read the sensor registers
 
-  //success = HalSensorReadReg(LM75A_REG_ADDR_TEMPERATURE, temp, 2 );
-  success = EggReadReg(LM75A_REG_ADDR_TEMPERATURE, temp, 2 );
-  if (success)
-  {
-    // Store values
+    //success = HalSensorReadReg(LM75A_REG_ADDR_TEMPERATURE, temp, 2 );
+    success = EggReadReg(LM75A_REG_ADDR_TEMPERATURE, temp, 2 );
+    if (success)
+    {
+        // Store values
 #if defined(MOVE_RIGHT5)
-    t = BUILD_UINT16(temp[1], temp[0]);
-    t = t >> 5;
-    pBuf[0] = HI_UINT16( t );
-    pBuf[1] = LO_UINT16( t );
+        t = BUILD_UINT16(temp[1], temp[0]);
+        t = t >> 5;
+        pBuf[0] = HI_UINT16( t );
+        pBuf[1] = LO_UINT16( t );
 #else
-    pBuf[0] = temp[1];
-    pBuf[1] = temp[0];
+        pBuf[0] = temp[1];
+        pBuf[1] = temp[0];
 #endif
-  }
+    }
 
-  // Turn off sensor
-  /*
-  if (HalSensorWriteReg(LM75A_REG_ADDR_CONFIG, configLM75AOff, 1))
-  {
-    irtSensorState = LM75A_OFF;
-  }
-  */
-  EggTurnOffLM75A();
-  //HalDcDcControl(ST_IRTEMP,false);
+    // Turn off sensor
+    /*
+    if (HalSensorWriteReg(LM75A_REG_ADDR_CONFIG, configLM75AOff, 1))
+    {
+      irtSensorState = LM75A_OFF;
+    }
+    */
+    EggTurnOffLM75A();
+    //HalDcDcControl(ST_IRTEMP,false);
 
-  return success;
+    return success;
 }
 int8 EggReadAllLM75ATemp(uint8 *pBuf)
 {
@@ -340,15 +340,15 @@ int8 EggReadAllLM75ATemp(uint8 *pBuf)
         success = EggReadReg(LM75A_REG_ADDR_TEMPERATURE, temp, 2 );
         if (success)
         {
-        #if defined(MOVE_RIGHT5_EGG)
+#if defined(MOVE_RIGHT5_EGG)
             t = BUILD_UINT16(temp[1], temp[0]);
             t = t >> 5;
             *p = HI_UINT16( t );
-            *(p+1) = LO_UINT16( t );
-        #else
+            *(p + 1) = LO_UINT16( t );
+#else
             *p = temp[1];
-            *(p+1) = temp[0];
-        #endif
+            *(p + 1) = temp[0];
+#endif
         }
         p += 2;
         EggTurnOffLM75A();
@@ -371,15 +371,15 @@ int8 EggReadAllLM75ATemp(uint8 *pBuf)
  **************************************************************************************************/
 bool EggSensorReadReg(uint8 addr, uint8 *pBuf, uint8 nBytes)
 {
-  uint8 i = 0;
+    uint8 i = 0;
 
-  return i == nBytes;
+    return i == nBytes;
 }
 
 static bool EggReadReg(uint8 addr, uint8 *pBuf, uint8 nBytes)
 {
-  //uint8 i = 0;
-   int8 i, ack, data;
+    //uint8 i = 0;
+    int8 i, ack, data;
     SET_SCL_OUTPUT;
     SET_SDA_OUTPUT;
 
@@ -393,110 +393,111 @@ static bool EggReadReg(uint8 addr, uint8 *pBuf, uint8 nBytes)
     PULL_SCL_LOW;
     I2C_DUMMY_DELAY;
 
-    data = gI2CAddress<<1;
+    data = gI2CAddress << 1;
     // send 8bits data, MSB first
-     for (i = 8; --i >= 0; )
-     {
-          if ((data>>i) & 0x01)
-          {
-             PULL_SDA_HIGH;
-          }
-          else
-          {
-             PULL_SDA_LOW;
-          }
-          I2C_DUMMY_DELAY;
-          PULL_SCL_HIGH;
-          I2C_DUMMY_DELAY;
-          PULL_SCL_LOW;
-          I2C_DUMMY_DELAY;
+    for (i = 8; --i >= 0; )
+    {
+        if ((data >> i) & 0x01)
+        {
+            PULL_SDA_HIGH;
+        }
+        else
+        {
+            PULL_SDA_LOW;
+        }
+        I2C_DUMMY_DELAY;
+        PULL_SCL_HIGH;
+        I2C_DUMMY_DELAY;
+        PULL_SCL_LOW;
+        I2C_DUMMY_DELAY;
     }
 
-     // receive ack
-     SET_SDA_INPUT;
-     PULL_SCL_HIGH;
-     I2C_DUMMY_DELAY;
-     ack = GET_SDA_VALUE; // read ack when HIGH period of the SCL
-     PULL_SCL_LOW;
-     SET_SDA_OUTPUT;
+    // receive ack
+    SET_SDA_INPUT;
+    PULL_SCL_HIGH;
+    I2C_DUMMY_DELAY;
+    ack = GET_SDA_VALUE; // read ack when HIGH period of the SCL
+    PULL_SCL_LOW;
+    SET_SDA_OUTPUT;
 
-     data = LM75A_REG_ADDR_TEMPERATURE;
-     // send 8bits data, MSB first
-     for (i = 8; --i >= 0; )
-     {
-          if ((data>>i) & 0x01)
-          {
-             PULL_SDA_HIGH;
-          }
-          else
-          {
-             PULL_SDA_LOW;
-          }
-          I2C_DUMMY_DELAY;
-          PULL_SCL_HIGH;
-          I2C_DUMMY_DELAY;
-          PULL_SCL_LOW;
-          I2C_DUMMY_DELAY;
-    }
-     // receive ack
-     SET_SDA_INPUT;
-     PULL_SCL_HIGH;
-     I2C_DUMMY_DELAY;
-     ack = GET_SDA_VALUE; // read ack when HIGH period of the SCL
-     PULL_SCL_LOW;
-     SET_SDA_OUTPUT;
-     I2C_DUMMY_DELAY;
-     //To re-start
-     PULL_SCL_HIGH;
-     PULL_SDA_HIGH;
-     I2C_DUMMY_DELAY;
-     PULL_SDA_LOW;
-     I2C_DUMMY_DELAY;
-     PULL_SCL_LOW;
-     I2C_DUMMY_DELAY;
-///////////////////////////////////////////////////////////////////////////////
-     data = gI2CAddress<<1;
-     data |= 0x01;
+    data = LM75A_REG_ADDR_TEMPERATURE;
     // send 8bits data, MSB first
-     for (i = 8; --i >= 0; )
-     {
-          if ((data>>i) & 0x01)
-          {
-             PULL_SDA_HIGH;
-          }
-          else
-          {
-             PULL_SDA_LOW;
-          }
-          I2C_DUMMY_DELAY;
-          PULL_SCL_HIGH;
-          I2C_DUMMY_DELAY;
-          PULL_SCL_LOW;
-          I2C_DUMMY_DELAY;
+    for (i = 8; --i >= 0; )
+    {
+        if ((data >> i) & 0x01)
+        {
+            PULL_SDA_HIGH;
+        }
+        else
+        {
+            PULL_SDA_LOW;
+        }
+        I2C_DUMMY_DELAY;
+        PULL_SCL_HIGH;
+        I2C_DUMMY_DELAY;
+        PULL_SCL_LOW;
+        I2C_DUMMY_DELAY;
+    }
+    // receive ack
+    SET_SDA_INPUT;
+    PULL_SCL_HIGH;
+    I2C_DUMMY_DELAY;
+    ack = GET_SDA_VALUE; // read ack when HIGH period of the SCL
+    PULL_SCL_LOW;
+    SET_SDA_OUTPUT;
+    I2C_DUMMY_DELAY;
+    //To re-start
+    PULL_SCL_HIGH;
+    PULL_SDA_HIGH;
+    I2C_DUMMY_DELAY;
+    PULL_SDA_LOW;
+    I2C_DUMMY_DELAY;
+    PULL_SCL_LOW;
+    I2C_DUMMY_DELAY;
+    ///////////////////////////////////////////////////////////////////////////////
+    data = gI2CAddress << 1;
+    data |= 0x01;
+    // send 8bits data, MSB first
+    for (i = 8; --i >= 0; )
+    {
+        if ((data >> i) & 0x01)
+        {
+            PULL_SDA_HIGH;
+        }
+        else
+        {
+            PULL_SDA_LOW;
+        }
+        I2C_DUMMY_DELAY;
+        PULL_SCL_HIGH;
+        I2C_DUMMY_DELAY;
+        PULL_SCL_LOW;
+        I2C_DUMMY_DELAY;
     }
 
-     // receive ack
-     SET_SDA_INPUT;
-     PULL_SCL_HIGH;
-     I2C_DUMMY_DELAY;
-     ack = GET_SDA_VALUE; // read ack when HIGH period of the SCL
-     PULL_SCL_LOW;
+    // receive ack
+    SET_SDA_INPUT;
+    PULL_SCL_HIGH;
+    I2C_DUMMY_DELAY;
+    ack = GET_SDA_VALUE; // read ack when HIGH period of the SCL
+    PULL_SCL_LOW;
 
-     // To read
+    // To read
     uint32 dataCache = 0;
     SET_SDA_INPUT;
 
     // receive 8bits data
-    for(i=8; --i>=0; ){
+    for(i = 8; --i >= 0; )
+    {
         dataCache <<= 1;
         PULL_SCL_HIGH;
         I2C_DUMMY_DELAY;
         dataCache |= GET_SDA_VALUE;
         PULL_SCL_LOW;
-       I2C_DUMMY_DELAY;
+        I2C_DUMMY_DELAY;
     }
 
-     SET_SDA_OUTPUT;
+    SET_SDA_OUTPUT;
     // send ack
     PULL_SDA_LOW;
 
@@ -512,16 +513,17 @@ static bool EggReadReg(uint8 addr, uint8 *pBuf, uint8 nBytes)
     SET_SDA_INPUT;
 
     // receive 8bits data
-    for(i=8; --i>=0; ){
+    for(i = 8; --i >= 0; )
+    {
         dataCache <<= 1;
         PULL_SCL_HIGH;
         I2C_DUMMY_DELAY;
         dataCache |= GET_SDA_VALUE;
         PULL_SCL_LOW;
-       I2C_DUMMY_DELAY;
+        I2C_DUMMY_DELAY;
     }
 
-     SET_SDA_OUTPUT;
+    SET_SDA_OUTPUT;
     // send ack
     PULL_SDA_HIGH;
 
@@ -533,7 +535,7 @@ static bool EggReadReg(uint8 addr, uint8 *pBuf, uint8 nBytes)
     pBuf[1] = (uint8)dataCache;
 
     I2C_Stop();
-  return TRUE;
+    return TRUE;
 }
 
 /**************************************************************************************************
@@ -549,52 +551,52 @@ static bool EggReadReg(uint8 addr, uint8 *pBuf, uint8 nBytes)
 */
 static bool EggSensorWriteReg(uint8 addr, uint8 *pBuf, uint8 nBytes)
 {
-  uint8 i;
-  
-  return (i == nBytes);
+    uint8 i;
+
+    return (i == nBytes);
 }
 
 static void EggLM75ATempSelect(uint8 id)
 {
-  // Select slave and set clock rate
+    // Select slave and set clock rate
     switch (id)
     {
-        case 0:
-            //HalI2CInit(LM75A_I2C_ADDRESS0, i2cClock_533KHZ);
-            gI2CAddress = LM75A_I2C_ADDRESS0;
-            break;
+    case 0:
+        //HalI2CInit(LM75A_I2C_ADDRESS0, i2cClock_533KHZ);
+        gI2CAddress = LM75A_I2C_ADDRESS0;
+        break;
 
-        case 1:
-            gI2CAddress = LM75A_I2C_ADDRESS1;
-            break;
+    case 1:
+        gI2CAddress = LM75A_I2C_ADDRESS1;
+        break;
 
-        case 2:
-            gI2CAddress = LM75A_I2C_ADDRESS2;
-            break;
+    case 2:
+        gI2CAddress = LM75A_I2C_ADDRESS2;
+        break;
 
-        case 3:
-            gI2CAddress = LM75A_I2C_ADDRESS3;
-            break;
+    case 3:
+        gI2CAddress = LM75A_I2C_ADDRESS3;
+        break;
 
-        case 4:
-            gI2CAddress = LM75A_I2C_ADDRESS4;
-            break;
+    case 4:
+        gI2CAddress = LM75A_I2C_ADDRESS4;
+        break;
 
-        case 5:
-            gI2CAddress = LM75A_I2C_ADDRESS5;
-            break;
+    case 5:
+        gI2CAddress = LM75A_I2C_ADDRESS5;
+        break;
 
-        case 6:
-            gI2CAddress = LM75A_I2C_ADDRESS6;
-            break;
+    case 6:
+        gI2CAddress = LM75A_I2C_ADDRESS6;
+        break;
 
-        case 7:
-            gI2CAddress = LM75A_I2C_ADDRESS7;
-            break;
+    case 7:
+        gI2CAddress = LM75A_I2C_ADDRESS7;
+        break;
 
-        default:
-            gI2CAddress = LM75A_I2C_ADDRESS0;
-            break;
+    default:
+        gI2CAddress = LM75A_I2C_ADDRESS0;
+        break;
     }
 }
 /*************************************************************************
@@ -613,9 +615,9 @@ static void EggLM75ATempSelect(uint8 id)
 *************************************************************************/
 void I2C_Init(void)
 {
-     /* set SCL, SDA normal GPIO mode */
-     SET_SDA_FN_0;
-     SET_SCL_FN_0;
+    /* set SCL, SDA normal GPIO mode */
+    SET_SDA_FN_0;
+    SET_SCL_FN_0;
 }
 
 /*************************************************************************
@@ -634,9 +636,9 @@ void I2C_Init(void)
 *************************************************************************/
 void I2C_Release(void)
 {
-     /* set SCL, SDA high */
-     PULL_SCL_HIGH;
-     PULL_SDA_HIGH;
+    /* set SCL, SDA high */
+    PULL_SCL_HIGH;
+    PULL_SDA_HIGH;
 }
 
 /*************************************************************************
@@ -661,18 +663,18 @@ void I2C_Release(void)
 *************************************************************************/
 void I2C_Start(void)
 {
-     SET_SCL_OUTPUT;
-     SET_SDA_OUTPUT;
+    SET_SCL_OUTPUT;
+    SET_SDA_OUTPUT;
 
-     PULL_SCL_HIGH;
-     PULL_SDA_HIGH;
-     I2C_DUMMY_DELAY;
+    PULL_SCL_HIGH;
+    PULL_SDA_HIGH;
+    I2C_DUMMY_DELAY;
 
-     PULL_SDA_LOW;
-     I2C_DUMMY_DELAY;
+    PULL_SDA_LOW;
+    I2C_DUMMY_DELAY;
 
-     PULL_SCL_LOW;
-     I2C_DUMMY_DELAY;
+    PULL_SCL_LOW;
+    I2C_DUMMY_DELAY;
 }
 
 /*************************************************************************
@@ -697,18 +699,18 @@ void I2C_Start(void)
 *************************************************************************/
 static void I2C_Stop(void)
 {
-     SET_SCL_OUTPUT;
-     SET_SDA_OUTPUT;
+    SET_SCL_OUTPUT;
+    SET_SDA_OUTPUT;
 
-     PULL_SCL_LOW;
-     PULL_SDA_LOW;
-     I2C_DUMMY_DELAY;
+    PULL_SCL_LOW;
+    PULL_SDA_LOW;
+    I2C_DUMMY_DELAY;
 
-     PULL_SCL_HIGH;
-     I2C_DUMMY_DELAY;
+    PULL_SCL_HIGH;
+    I2C_DUMMY_DELAY;
 
-     PULL_SDA_HIGH;
-     I2C_DUMMY_DELAY;
+    PULL_SDA_HIGH;
+    I2C_DUMMY_DELAY;
 }
 
 /*************************************************************************
@@ -727,33 +729,34 @@ static void I2C_Stop(void)
 *************************************************************************/
 uint8 I2C_TxByte(uint8 data)
 {
-     int8 i, ack;
-     SET_SCL_OUTPUT;
-     SET_SDA_OUTPUT;
+    int8 i, ack;
+    SET_SCL_OUTPUT;
+    SET_SDA_OUTPUT;
 
-     // send 8bits data, MSB first
-     for(i=8; --i>=0; ){
-          if((data>>i)& 0x01)
-               PULL_SDA_HIGH;
-          else
-               PULL_SDA_LOW;
-          I2C_DUMMY_DELAY;
-          PULL_SCL_HIGH;
-          I2C_DUMMY_DELAY;
-          PULL_SCL_LOW;
-          I2C_DUMMY_DELAY;
+    // send 8bits data, MSB first
+    for(i = 8; --i >= 0; )
+    {
+        if((data >> i) & 0x01)
+            PULL_SDA_HIGH;
+        else
+            PULL_SDA_LOW;
+        I2C_DUMMY_DELAY;
+        PULL_SCL_HIGH;
+        I2C_DUMMY_DELAY;
+        PULL_SCL_LOW;
+        I2C_DUMMY_DELAY;
     }
 
-     // receive ack
-     SET_SDA_INPUT;
+    // receive ack
+    SET_SDA_INPUT;
 
-     PULL_SCL_HIGH;
-     I2C_DUMMY_DELAY;
-     ack = GET_SDA_VALUE; // read ack when HIGH period of the SCL
-     PULL_SCL_LOW;
+    PULL_SCL_HIGH;
+    I2C_DUMMY_DELAY;
+    ack = GET_SDA_VALUE; // read ack when HIGH period of the SCL
+    PULL_SCL_LOW;
 
-     SET_SDA_OUTPUT;
-     return ack;
+    SET_SDA_OUTPUT;
+    return ack;
 }
 
 /*************************************************************************
@@ -774,28 +777,29 @@ uint8 I2C_TxByte(uint8 data)
 *************************************************************************/
 void I2C_RxByte(uint8 *data, uint8 ack)
 {
-     int16 i;
+    int16 i;
     uint32 dataCache;
     dataCache = 0;
 
     SET_SDA_INPUT;
 
     // receive 8bits data
-    for(i=8; --i>=0; ){
+    for(i = 8; --i >= 0; )
+    {
         dataCache <<= 1;
         PULL_SCL_HIGH;
         I2C_DUMMY_DELAY;
         dataCache |= GET_SDA_VALUE;
         PULL_SCL_LOW;
-       I2C_DUMMY_DELAY;
+        I2C_DUMMY_DELAY;
     }
 
-     SET_SDA_OUTPUT;
+    SET_SDA_OUTPUT;
     // send ack
     if(ack)
-         PULL_SDA_HIGH;
+        PULL_SDA_HIGH;
     else
-         PULL_SDA_LOW;
+        PULL_SDA_LOW;
     I2C_DUMMY_DELAY;
     PULL_SCL_HIGH;
     I2C_DUMMY_DELAY;
