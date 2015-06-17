@@ -45,18 +45,18 @@ extern "C"
 {
 #endif
 
-/*********************************************************************
- * INCLUDES
- */
+    /*********************************************************************
+     * INCLUDES
+     */
 
-/*********************************************************************
- * CONSTANTS
- */
+    /*********************************************************************
+     * CONSTANTS
+     */
 
-// Sensor Tag Task Events
+    // Sensor Tag Task Events
 #define ST_START_DEVICE_EVT                              0x0001
 #define ST_SERIAL_SEND_NOTI_EVT                          0x0002
-#define ST_ACCELEROMETER_SENSOR_EVT                      0x0004
+#define ST_LXY_DS18B20_EVT                               0x0004
 #define ST_HUMIDITY_SENSOR_EVT                           0x0008
 #define ST_MAGNETOMETER_SENSOR_EVT                       0x0010
 #define ST_BAROMETER_SENSOR_EVT                          0x0020
@@ -70,31 +70,31 @@ extern "C"
 #define ST_CONN_PARAM_UPDATE_EVT                         0x1000
 #define ST_LM75A_SENSOR_GPIO_EVT                         0x2000
 #define ST_LM75A_SENSOR_EVT                              0x4000
-/*********************************************************************
- * MACROS
- */
+    /*********************************************************************
+     * MACROS
+     */
 
-/*********************************************************************
- * FUNCTIONS
- */
+    /*********************************************************************
+     * FUNCTIONS
+     */
 
-/*
- * Task Initialization for the BLE Application
- */
-extern void SensorTag_Init( uint8 task_id );
+    /*
+     * Task Initialization for the BLE Application
+     */
+    extern void SensorTag_Init( uint8 task_id );
 
-/*
- * Task Event Processor for the BLE Application
- */
-extern uint16 SensorTag_ProcessEvent( uint8 task_id, uint16 events );
+    /*
+     * Task Event Processor for the BLE Application
+     */
+    extern uint16 SensorTag_ProcessEvent( uint8 task_id, uint16 events );
 
-/*
- * Power on self test
- */
-extern uint16 sensorTag_test(void);
+    /*
+     * Power on self test
+     */
+    extern uint16 sensorTag_test(void);
 
-/*********************************************************************
-*********************************************************************/
+    /*********************************************************************
+    *********************************************************************/
 
 #ifdef __cplusplus
 }

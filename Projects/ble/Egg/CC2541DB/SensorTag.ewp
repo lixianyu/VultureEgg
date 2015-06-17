@@ -3227,6 +3227,12 @@
   <group>
     <name>APP</name>
     <file>
+      <name>$PROJ_DIR$\..\Source\DS18B20.c</name>
+    </file>
+    <file>
+      <name>$PROJ_DIR$\..\Source\DS18B20.h</name>
+    </file>
+    <file>
       <name>$PROJ_DIR$\..\Source\i2c.c</name>
     </file>
     <file>

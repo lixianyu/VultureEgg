@@ -101,7 +101,7 @@
 #include "OneWire.h"
 #include "i2c.h"
 #include "OSAL_Clock.h"
-
+#include "DS18B20.h"
 /*********************************************************************
  * MACROS
  */
@@ -342,7 +342,7 @@ static void readDs18b20WithState(uint8 state, uint8 flagrom);
 static void readDs18b20WithState1(uint8 state, uint8 flagrom);
 static void barometerChangeCB( uint8 paramID );
 //static void irTempChangeCB( uint8 paramID );
-static void accelChangeCB( uint8 paramID );
+//static void accelChangeCB( uint8 paramID );
 static void mpu6050ChangeCB( uint8 paramID );
 static void ds18b20ChangeCB( uint8 paramID );
 static void humidityChangeCB( uint8 paramID);
@@ -389,12 +389,12 @@ static sensorCBs_t sensorTag_IrTempCBs =
 {
     irTempChangeCB,           // Characteristic value change callback
 };
-#endif
+
 static sensorCBs_t sensorTag_AccelCBs =
 {
     accelChangeCB,            // Characteristic value change callback
 };
-
+#endif
 static sensorCBs_t sensorTag_Mpu6050CBs =
 {
     mpu6050ChangeCB,              // Characteristic value change callback
@@ -661,6 +661,11 @@ void SensorTag_Init( uint8 task_id )
     // Setup a delayed profile startup
     osal_set_event( sensorTag_TaskID, ST_START_DEVICE_EVT );
     //osal_start_timerEx( sensorTag_TaskID, ST_SERIAL_SEND_NOTI_EVT, 2000 );
+#if 0
+    P0DIR &= 0xFE;
+    DS18B20_reset_search();
+    osal_start_timerEx( sensorTag_TaskID, ST_LXY_DS18B20_EVT, 3750 );
+#endif
 }
 
 /*********************************************************************
@@ -758,7 +763,7 @@ uint16 SensorTag_ProcessEvent( uint8 task_id, uint16 events )
 
         return (events ^ ST_IRTEMPERATURE_READ_EVT);
     }
-#endif
+
     //////////////////////////
     //    Accelerometer     //
     //////////////////////////
@@ -777,7 +782,7 @@ uint16 SensorTag_ProcessEvent( uint8 task_id, uint16 events )
 
         return (events ^ ST_ACCELEROMETER_SENSOR_EVT);
     }
-
+#endif
     //////////////////////////
     //    MPU6050           //
     //////////////////////////
@@ -831,6 +836,80 @@ uint16 SensorTag_ProcessEvent( uint8 task_id, uint16 events )
         HalMPU6050setDMPEnabled(true);
         osal_start_timerEx( sensorTag_TaskID, ST_MPU6050_SENSOR_EVT, 4000 );
         return (events ^ ST_MPU6050_DMP_INIT_EVT);
+    }
+    if (events & ST_LXY_DS18B20_EVT)
+    {
+        static uint8 stateDS = 0;
+        uint8 ret = 0xCB;
+        advertData[7] = stateDS;
+        if (stateDS == 0)
+        {
+            ret = MyDS18B20_Reset();
+            //ret = DS18B20_Init();
+            //ret = OneWire_reset();
+            MyDS18B20_Write(SKIP_ROM);
+            MyDS18B20_Write(CONVERT_T);
+            osal_start_timerEx( sensorTag_TaskID, ST_LXY_DS18B20_EVT, 750 );
+            stateDS = 1;
+
+            advertData[8] = ret;
+        }
+        else
+        {
+#if 1
+            ret = MyDS18B20_Reset();
+            MyDS18B20_Write(SKIP_ROM);
+            MyDS18B20_Write(RD_SCRATCHPAD);
+            unsigned char tem_h, tem_l;   //温度高位字节及低位字节
+            tem_l = MyDS18B20_Read1();
+            tem_h = MyDS18B20_Read1();
+            stateDS = 0;
+            advertData[9] = ret;
+            advertData[10] = tem_l;
+            advertData[11] = tem_h;
+            advertData[12] = MyDS18B20_Read1();
+            advertData[13] = MyDS18B20_Read1();
+            advertData[14] = MyDS18B20_Read1();
+            advertData[15] = MyDS18B20_Read1();
+            advertData[16] = MyDS18B20_Read1();
+            advertData[17] = MyDS18B20_Read1();
+            advertData[18] = MyDS18B20_Read1();
+
+            advertData[19] = DS18B20_crc8(advertData+10, 8);
+#elif 0
+            ret = MyDS18B20_Reset();
+            MyDS18B20_Write(READ_ROM);
+            advertData[9] = ret;
+            advertData[10] = MyDS18B20_Read1();//8-bit family code.
+            advertData[11] = MyDS18B20_Read1();//Unique 48-bit serial number
+            advertData[12] = MyDS18B20_Read1();
+            advertData[13] = MyDS18B20_Read1();
+            advertData[14] = MyDS18B20_Read1();
+            advertData[15] = MyDS18B20_Read1();
+            advertData[16] = MyDS18B20_Read1();
+            advertData[17] = MyDS18B20_Read1();//8-bit CRC
+            advertData[18] = DS18B20_crc8(advertData+10, 7);
+#elif 0
+            //ret = MyDS18B20_Reset();
+            //DS18B20_reset_search();
+            ret = DS18B20_search(advertData + 10);
+            if (!ret)
+            {
+                DS18B20_reset_search();
+            }
+            advertData[9] = ret;
+#else
+            ret = MyDS18B20_Reset();
+            advertData[9] = ret;
+            MyDS18B20_Write(SKIP_ROM);
+            MyDS18B20_Write(RD_PWR_SUPPLY);
+            advertData[10] = MyDS18B20_Read();
+#endif
+            osal_start_timerEx( sensorTag_TaskID, ST_LXY_DS18B20_EVT, 4100 );
+            stateDS = 0;
+        }
+        GAPRole_SetParameter( GAPROLE_ADVERT_DATA, sizeof( advertData ), advertData );
+        return (events ^ ST_LXY_DS18B20_EVT);
     }
     //////////////////////////
     //    DS18B20           //
@@ -2208,7 +2287,6 @@ static void irTempChangeCB( uint8 paramID )
         break;
     }
 }
-#endif
 
 /*********************************************************************
  * @fn      accelChangeCB
@@ -2259,6 +2337,7 @@ static void accelChangeCB( uint8 paramID )
         break;
     }
 }
+#endif
 
 static void mpu6050StarWhenConnected(void)
 {
